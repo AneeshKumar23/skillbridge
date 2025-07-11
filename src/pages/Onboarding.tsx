@@ -54,7 +54,7 @@ const Onboarding = () => {
               <h1 className="text-4xl font-bold text-gray-800 mb-4">Welcome to SkillBridge! 🎉</h1>
               <p className="text-gray-600 mb-8">Your learning journey begins now</p>
               <button 
-                onClick={() => window.location.href = '/dashboard'}
+                onClick={() => window.location.href = '/chat'}
                 className="bg-blue-400 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-500 transition-colors"
               >
                 Start Learning
