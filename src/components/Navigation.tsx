@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { Link } from 'react-router-dom';
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -11,14 +12,14 @@ const Navigation = () => {
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <div className="flex items-center">
+          <Link to="/" className="flex items-center">
             <img 
               src="/placeholder.svg" 
               alt="SkillBridge Logo" 
               className="h-8 w-8 mr-2"
             />
             <span className="text-xl font-bold text-black">SkillBridge</span>
-          </div>
+          </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
@@ -31,11 +32,11 @@ const Navigation = () => {
 
           {/* Auth Buttons - Desktop */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="outline" className="text-gray-700 border-gray-300 hover:bg-gray-50">
-              Login
+            <Button variant="outline" className="text-gray-700 border-gray-300 hover:bg-gray-50" asChild>
+              <Link to="/login">Login</Link>
             </Button>
-            <Button className="bg-blue-400 text-white hover:bg-blue-500">
-              Sign Up
+            <Button className="bg-blue-400 text-white hover:bg-blue-500" asChild>
+              <Link to="/signup">Sign Up</Link>
             </Button>
           </div>
 
@@ -58,11 +59,11 @@ const Navigation = () => {
               <a href="#about" className="text-gray-700 hover:text-blue-400 transition-colors">About</a>
               <a href="#contact" className="text-gray-700 hover:text-blue-400 transition-colors">Contact</a>
               <div className="flex flex-col space-y-2 pt-4">
-                <Button variant="outline" className="w-full text-gray-700 border-gray-300 hover:bg-gray-50">
-                  Login
+                <Button variant="outline" className="w-full text-gray-700 border-gray-300 hover:bg-gray-50" asChild>
+                  <Link to="/login">Login</Link>
                 </Button>
-                <Button className="w-full bg-blue-400 text-white hover:bg-blue-500">
-                  Sign Up
+                <Button className="w-full bg-blue-400 text-white hover:bg-blue-500" asChild>
+                  <Link to="/signup">Sign Up</Link>
                 </Button>
               </div>
             </div>
