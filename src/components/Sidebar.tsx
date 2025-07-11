@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { Plus, Award, Settings, MessageSquare, User, Search, MoreHorizontal } from 'lucide-react';
+import { Plus, Award, Settings, MessageSquare, User, Search, MoreHorizontal, X } from 'lucide-react';
+
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onNavigate: (page: string) => void;
+}
 
 interface Chat {
   id: string;
@@ -40,7 +46,7 @@ const mockChats: Chat[] = [
   },
 ];
 
-export const Sidebar: React.FC = () => {
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [chats] = useState<Chat[]>(mockChats);
 
@@ -61,9 +67,34 @@ export const Sidebar: React.FC = () => {
   };
 
   return (
-    <div className="w-80 bg-white border-r border-gray-200 flex flex-col h-full">
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={onClose}
+        />
+      )}
+      
+      {/* Sidebar */}
+      <div className={`
+        fixed lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out z-50
+        w-80 sm:w-80 bg-white border-r border-gray-200 flex flex-col h-full
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:block
+      `}>
+        {/* Mobile Close Button */}
+        <div className="lg:hidden flex justify-end p-4 border-b border-gray-200">
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
       {/* Profile Section */}
-      <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200">
         <div className="flex items-center space-x-3">
           <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
             <User className="w-6 h-6 text-white" />
@@ -88,7 +119,10 @@ export const Sidebar: React.FC = () => {
 
       {/* Certification Section */}
       <div className="px-4 pb-4">
-        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4">
+        <div 
+          className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4 cursor-pointer hover:from-yellow-100 hover:to-orange-100 transition-colors"
+          onClick={() => onNavigate('certificates')}
+        >
           <div className="flex items-center space-x-2 mb-2">
             <Award className="w-5 h-5 text-yellow-600" />
             <h4 className="font-medium text-yellow-900">Certifications</h4>
@@ -110,7 +144,10 @@ export const Sidebar: React.FC = () => {
 
       {/* Settings Section */}
       <div className="px-4 pb-4">
-        <button className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+        <button 
+          className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+          onClick={() => onNavigate('settings')}
+        >
           <Settings className="w-5 h-5" />
           <span>Settings</span>
         </button>
@@ -173,6 +210,7 @@ export const Sidebar: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };

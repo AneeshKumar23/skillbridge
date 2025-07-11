@@ -1,7 +1,11 @@
 import React from 'react';
 import { LogOut, User } from 'lucide-react';
 
-export const Header: React.FC = () => {
+interface HeaderProps {
+  onMenuToggle: () => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
   const handleLogout = () => {
     // Handle logout logic here
     console.log('Logging out...');
@@ -10,6 +14,25 @@ export const Header: React.FC = () => {
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
       <div className="flex items-center space-x-4">
+        <button 
+          onClick={onMenuToggle}
+          className="md:hidden p-1 rounded-md hover:bg-gray-100"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6 text-gray-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 6h16M4 12h16M4 18h16"
+            />
+          </svg>
+        </button>
         <h1 className="text-xl font-semibold text-gray-900">SkillChat</h1>
         <div className="w-2 h-2 bg-green-400 rounded-full"></div>
         <span className="text-sm text-gray-500">AI Learning Assistant</span>
