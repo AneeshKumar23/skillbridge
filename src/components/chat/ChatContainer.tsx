@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Send, Paperclip, Smile } from 'lucide-react';
+import { ChatInput } from '../chat/ChatInput';
 
 interface Message {
   id: string;
@@ -17,37 +17,26 @@ export const ChatContainer: React.FC = () => {
       timestamp: new Date(),
     },
   ]);
-  const [inputMessage, setInputMessage] = useState('');
 
-  const handleSendMessage = () => {
-    if (inputMessage.trim()) {
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        content: inputMessage,
-        isUser: true,
+  const handleSendMessage = (message: string) => {
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      content: message,
+      isUser: true,
+      timestamp: new Date(),
+    };
+    setMessages([...messages, newMessage]);
+    
+    // Simulate AI response
+    setTimeout(() => {
+      const aiResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        content: 'That\'s a great question! Let me help you understand this concept better.',
+        isUser: false,
         timestamp: new Date(),
       };
-      setMessages([...messages, newMessage]);
-      setInputMessage('');
-      
-      // Simulate AI response
-      setTimeout(() => {
-        const aiResponse: Message = {
-          id: (Date.now() + 1).toString(),
-          content: 'That\'s a great question! Let me help you understand this concept better.',
-          isUser: false,
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, aiResponse]);
-      }, 1000);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
+      setMessages(prev => [...prev, aiResponse]);
+    }, 1000);
   };
 
   return (
@@ -93,34 +82,10 @@ export const ChatContainer: React.FC = () => {
       </div>
 
       {/* Input Area */}
-      <div className="p-4 border-t border-gray-200">
-        <div className="flex items-end space-x-2">
-          <div className="flex-1 relative">
-            <textarea
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Type your message..."
-              className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              rows={1}
-            />
-            <div className="absolute right-2 top-2 flex items-center space-x-1">
-              <button className="p-1 text-gray-400 hover:text-gray-600 transition-colors">
-                <Paperclip className="w-4 h-4" />
-              </button>
-              <button className="p-1 text-gray-400 hover:text-gray-600 transition-colors">
-                <Smile className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-          <button
-            onClick={handleSendMessage}
-            className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            <Send className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
+      <ChatInput 
+  onSendMessage={handleSendMessage} 
+  elevenLabsApiKey="sk_f4eb4f9b5bd11d11f96e09cb006772873690e5ef88c767c0" 
+/>
     </div>
   );
 };
