@@ -1,18 +1,28 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { login } from '../../api/db';
 
 const Login = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Login attempt:', { email, password });
-    // Handle login logic here
+    
+    try {
+      const response = await login({ email, password });
+      console.log('Login successful:', response);
+      // Store user ID or token in state/context as needed
+      navigate('/dashboard'); // Redirect to dashboard after login
+    } catch (error) {
+      console.error('Login error:', error);
+      alert(error.message);
+    }
   };
 
   return (
