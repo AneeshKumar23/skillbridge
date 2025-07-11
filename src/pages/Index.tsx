@@ -2,6 +2,9 @@
 import { ArrowRight, Play, Smartphone, Globe, Brain, Award, Users, Download, BookOpen, CheckCircle, Star, MessageCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import Navigation from "@/components/Navigation";
+import TabletVideo from "@/components/TabletVideo";
+import Footer from "@/components/Footer";
 
 const Index = () => {
   const languages = [
@@ -92,6 +95,8 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-white">
+      <Navigation />
+
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-[#f0f9ff] to-[#ffffff] text-black">
         <div className="container mx-auto px-4 py-20">
@@ -150,7 +155,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* About Section */}
+      {/* About Section with Tablet Video */}
       <section className="bg-white text-black py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
@@ -158,10 +163,15 @@ const Index = () => {
               <h2 className="text-4xl md:text-5xl font-bold mb-6">
                 Transforming Dreams Into <span className="text-blue-400">Careers</span>
               </h2>
-              <p className="text-xl text-gray-700 max-w-3xl mx-auto">
+              <p className="text-xl text-gray-700 max-w-3xl mx-auto mb-12">
                 SkillBridge is an adaptive platform tailored for rural India. Whether you're on a 
                 basic smartphone or learning offline, SkillBridge meets you where you are.
               </p>
+
+              {/* Tablet Video Component */}
+              <div className="mb-16">
+                <TabletVideo />
+              </div>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {features.map((feature, index) => (
@@ -229,7 +239,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Testimonials */}
       <section className="bg-[#f9fafb] py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
@@ -274,7 +283,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Call to Action */}
       <section className="bg-white text-black py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
@@ -301,14 +309,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-50 border-t border-gray-200 py-8">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-gray-600">
-            © 2024 SkillBridge. Empowering rural India through AI-powered education.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };
