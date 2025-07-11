@@ -92,12 +92,13 @@ const Login = () => {
                     </Link>
                   </div>
 
-                  <Button 
+                    <Button 
                     type="submit" 
                     className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-sm"
-                  >
+                    onClick={() => window.location.href = '/chat'}
+                    >
                     Sign In
-                  </Button>
+                    </Button>
                 </form>
 
                 <div className="mt-6 text-center md:hidden">

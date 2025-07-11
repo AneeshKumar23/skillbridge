@@ -9,7 +9,7 @@ import Signup from "./pages/Signup";
 import Onboarding from "./pages/Onboarding";
 import { Chat } from "./pages/Chat";
 import NotFound from "./pages/NotFound";
-
+import Contact from "../src/components/landing/Contact";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -19,6 +19,12 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/" element={<Index />} />
+          <Route path="/" element={<Index />} />
+          <Route path="/" element={<Index />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/" element={<Index />} />
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
