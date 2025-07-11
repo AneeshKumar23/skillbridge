@@ -2,10 +2,17 @@ export interface TranscriptionResponse {
     text: string;
 }
 
-export async function transcribeAudio(audioBlob: Blob, apiKey: string): Promise<TranscriptionResponse | null> {
+export type TranscriptionLanguage = 'en' | 'ta' | 'te' | 'hi';
+
+export async function transcribeAudio(
+    audioBlob: Blob, 
+    apiKey: string,
+    language: TranscriptionLanguage = 'en'
+): Promise<TranscriptionResponse | null> {
     const formData = new FormData();
     formData.append('file', audioBlob, 'recording.mp3');
     formData.append('model_id', 'scribe_v1');
+    formData.append('language', language);
 
     try {
         const response = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {

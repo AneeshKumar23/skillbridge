@@ -1,16 +1,25 @@
 import React, { useState, useRef } from 'react';
-import { Send, Paperclip, Mic } from 'lucide-react';
-import { AudioRecorder, transcribeAudio } from '../../../api/stt';
+import { Send, Paperclip, Mic, Languages } from 'lucide-react';
+import { AudioRecorder, transcribeAudio, TranscriptionLanguage } from '../../../api/stt';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
   elevenLabsApiKey: string;
 }
 
+const languageOptions = [
+  { value: 'en', label: 'English' },
+  { value: 'ta', label: 'Tamil' },
+  { value: 'te', label: 'Telugu' },
+  { value: 'hi', label: 'Hindi' },
+];
+
 export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, elevenLabsApiKey }) => {
   const [inputMessage, setInputMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState<TranscriptionLanguage>('en');
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
 
   const handleSend = () => {
@@ -37,7 +46,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, elevenLabsA
       // Start recording
       try {
         audioRecorderRef.current = new AudioRecorder(async (audioBlob) => {
-          const result = await transcribeAudio(audioBlob, elevenLabsApiKey);
+          const result = await transcribeAudio(audioBlob, elevenLabsApiKey, currentLanguage);
           if (result?.text) {
             const transcribedText = result.text.trim();
             setInputMessage(transcribedText);
@@ -57,6 +66,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, elevenLabsA
     }
   };
 
+  const selectLanguage = (language: TranscriptionLanguage) => {
+    setCurrentLanguage(language);
+    setShowLanguageDropdown(false);
+  };
+
   return (
     <div className="p-4 bg-white border-t border-gray-100 rounded-b-2xl shadow-sm">
       <div className="flex items-center gap-3">
@@ -69,6 +83,34 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, elevenLabsA
           >
             <Paperclip className="w-5 h-5" />
           </button>
+          
+          {/* Language dropdown */}
+          <div className="relative">
+            <button 
+              type="button"
+              onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+              className="p-2 text-gray-400 hover:text-blue-500 rounded-full hover:bg-blue-50 transition-colors"
+              aria-label="Select language"
+            >
+              <Languages className="w-5 h-5" />
+            </button>
+            {showLanguageDropdown && (
+              <div className="absolute bottom-full left-0 mb-2 w-40 bg-white rounded-lg shadow-lg z-10 border border-gray-200">
+                {languageOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => selectLanguage(option.value as TranscriptionLanguage)}
+                    className={`w-full text-left px-4 py-2 hover:bg-blue-50 ${
+                      currentLanguage === option.value ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          
           <button 
             type="button"
             onClick={toggleRecording}
@@ -135,6 +177,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, elevenLabsA
       {isTranscribing && (
         <div className="mt-2 text-center text-sm text-blue-500">
           Transcribing your speech...
+        </div>
+      )}
+      {!isRecording && !isTranscribing && (
+        <div className="mt-2 text-center text-sm text-gray-500">
+          Selected language: {languageOptions.find(l => l.value === currentLanguage)?.label}
         </div>
       )}
     </div>
