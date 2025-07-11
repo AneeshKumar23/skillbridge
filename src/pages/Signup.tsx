@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 
 const Signup = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -35,7 +35,9 @@ const Signup = () => {
       return;
     }
     console.log('Signup attempt:', formData);
-    // Handle signup logic here
+    
+    // Simulate successful registration and redirect to onboarding
+    navigate('/onboarding');
   };
 
   return (
@@ -44,9 +46,9 @@ const Signup = () => {
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
             <img 
-              src="/placeholder.svg" 
+              src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=48&h=48&fit=crop&crop=center" 
               alt="SkillBridge Logo" 
-              className="h-12 w-12"
+              className="h-12 w-12 rounded-lg"
             />
           </div>
           <CardTitle className="text-2xl font-bold text-center">Create your account</CardTitle>

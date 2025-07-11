@@ -14,9 +14,9 @@ const Navigation = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center">
             <img 
-              src="/placeholder.svg" 
+              src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=32&h=32&fit=crop&crop=center" 
               alt="SkillBridge Logo" 
-              className="h-8 w-8 mr-2"
+              className="h-8 w-8 mr-2 rounded"
             />
             <span className="text-xl font-bold text-black">SkillBridge</span>
           </Link>
