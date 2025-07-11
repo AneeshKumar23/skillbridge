@@ -14,11 +14,10 @@ const Footer = () => {
           <div className="space-y-4">
             <div className="flex items-center">
               <img 
-                src="/placeholder.svg" 
+                src="/assets/logo.png" 
                 alt="SkillBridge Logo" 
-                className="h-8 w-8 mr-2 brightness-0 invert"
+                className="h-20 w-24 mr-2 brightness-0 invert"
               />
-              <span className="text-xl font-bold">SkillBridge</span>
             </div>
             <p className="text-gray-300 text-sm leading-relaxed">
               Empowering rural India through AI-powered education. Breaking barriers, 
