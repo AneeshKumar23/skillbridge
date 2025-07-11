@@ -33,89 +33,119 @@ const LocationSlide = ({ formData, updateFormData, onNext }: LocationSlideProps)
   const allFieldsFilled = address && city && state && pincode && country;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <img 
-            src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=64&h=64&fit=crop&crop=center" 
-            alt="SkillBridge Logo" 
-            className="h-16 w-16 mx-auto mb-4 rounded-lg"
-          />
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Tell us about your location</h1>
-          <p className="text-gray-600">Help us personalize your experience</p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-6">
+        {/* Header with logo and progress indicator */}
+        <div className="flex flex-col items-center">
+          <div className="mb-4 flex items-center justify-center">
+            <img 
+              src="assets/logo.png" 
+              alt="Company Logo" 
+              className="h-10 w-auto"
+            />
+          </div>
+          
+          <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
+            <div 
+              className="bg-blue-500 h-2 rounded-full" 
+              style={{ width: '66%' }}
+            ></div>
+          </div>
+          
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">Where are you located?</h1>
+            <p className="text-gray-500">We'll use this to personalize your experience</p>
+          </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Address Details</CardTitle>
+        {/* Form Card */}
+        <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 p-6">
+            <CardTitle className="text-white">Address Information</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="address">Street Address</Label>
+          <CardContent className="p-6 space-y-4">
+            <div className="space-y-3">
+              <Label htmlFor="address" className="text-gray-700 font-medium">Street Address</Label>
               <Input
                 id="address"
                 type="text"
-                placeholder="Enter your street address"
+                placeholder="123 Main St"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
+                className="focus-visible:ring-blue-500 border-gray-300"
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
-              <Input
-                id="city"
-                type="text"
-                placeholder="Enter your city"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                required
-              />
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <Label htmlFor="city" className="text-gray-700 font-medium">City</Label>
+                <Input
+                  id="city"
+                  type="text"
+                  placeholder="New York"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="focus-visible:ring-blue-500 border-gray-300"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-3">
+                <Label htmlFor="state" className="text-gray-700 font-medium">State</Label>
+                <Input
+                  id="state"
+                  type="text"
+                  placeholder="NY"
+                  value={state}
+                  onChange={(e) => setState(e.target.value)}
+                  className="focus-visible:ring-blue-500 border-gray-300"
+                  required
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="state">State/Province</Label>
-              <Input
-                id="state"
-                type="text"
-                placeholder="Enter your state or province"
-                value={state}
-                onChange={(e) => setState(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="pincode">Postal/Zip Code</Label>
-              <Input
-                id="pincode"
-                type="text"
-                placeholder="Enter your postal code"
-                value={pincode}
-                onChange={(e) => setPincode(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="country">Country</Label>
-              <Input
-                id="country"
-                type="text"
-                placeholder="Enter your country"
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                required
-              />
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <Label htmlFor="pincode" className="text-gray-700 font-medium">Postal Code</Label>
+                <Input
+                  id="pincode"
+                  type="text"
+                  placeholder="10001"
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value)}
+                  className="focus-visible:ring-blue-500 border-gray-300"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-3">
+                <Label htmlFor="country" className="text-gray-700 font-medium">Country</Label>
+                <Input
+                  id="country"
+                  type="text"
+                  placeholder="United States"
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  className="focus-visible:ring-blue-500 border-gray-300"
+                  required
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <div className="flex justify-between items-center mt-8">
-          <div className="text-sm text-gray-500">Step 2 of 3</div>
+        {/* Navigation */}
+        <div className="flex justify-end">
           <Button 
             onClick={handleNext}
             disabled={!allFieldsFilled}
-            className="bg-blue-400 hover:bg-blue-500"
+            className="px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-lg font-medium shadow-md transition-all transform hover:scale-105"
           >
             Continue
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
           </Button>
         </div>
       </div>
