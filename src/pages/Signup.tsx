@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { signup } from '../../api/db';
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ const Signup = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (formData.password !== formData.confirmPassword) {
@@ -43,8 +44,14 @@ const Signup = () => {
       return;
     }
 
-    console.log('Signup attempt:', formData);
-    navigate('/onboarding');
+    try {
+      const response = await signup(formData);
+      console.log('Signup successful:', response);
+      navigate('/onboarding');
+    } catch (error) {
+      console.error('Signup error:', error);
+      alert(error.message);
+    }
   };
 
   return (
