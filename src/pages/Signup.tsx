@@ -12,6 +12,7 @@ const Signup = () => {
     firstName: '',
     lastName: '',
     email: '',
+    phone: '',
     password: '',
     confirmPassword: '',
     agreeToTerms: false
@@ -26,127 +27,189 @@ const Signup = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (formData.password !== formData.confirmPassword) {
       alert('Passwords do not match');
       return;
     }
+
+    if (!/^[\d\s+-]{10,}$/.test(formData.phone)) {
+      alert('Please enter a valid phone number');
+      return;
+    }
+
     if (!formData.agreeToTerms) {
       alert('Please agree to the terms and conditions');
       return;
     }
+
     console.log('Signup attempt:', formData);
-    
-    // Simulate successful registration and redirect to onboarding
     navigate('/onboarding');
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex justify-center mb-4">
-            <img 
-              src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=48&h=48&fit=crop&crop=center" 
-              alt="SkillBridge Logo" 
-              className="h-12 w-12 rounded-lg"
-            />
-          </div>
-          <CardTitle className="text-2xl font-bold text-center">Create your account</CardTitle>
-          <CardDescription className="text-center">
-            Join SkillBridge and start your learning journey
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">First Name</Label>
-                <Input
-                  id="firstName"
-                  type="text"
-                  placeholder="John"
-                  value={formData.firstName}
-                  onChange={(e) => handleInputChange('firstName', e.target.value)}
-                  required
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-6">
+      <div className="w-full max-w-4xl mx-auto">
+        <Card className="w-full shadow-xl rounded-2xl overflow-hidden border-0">
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            {/* Left side - Branding */}
+            <div className="hidden md:flex bg-gradient-to-br from-blue-500 to-blue-600 p-10 text-white flex-col justify-between">
+              <div>
+                <img 
+                  src="/assets/logo2.png" 
+                  alt="SkillBridge Logo" 
+                  className="h-40 w-40 mb-6"
                 />
+                <h2 className="text-3xl font-bold mb-4">Join SkillBridge Today</h2>
+                <p className="text-blue-100">
+                  Start your learning journey with access to thousands of courses and expert instructors.
+                </p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name</Label>
-                <Input
-                  id="lastName"
-                  type="text"
-                  placeholder="Doe"
-                  value={formData.lastName}
-                  onChange={(e) => handleInputChange('lastName', e.target.value)}
-                  required
-                />
+              <div className="mt-8">
+                <p className="text-blue-100 text-sm">
+                  Already have an account?{' '}
+                  <Link 
+                    to="/login" 
+                    className="text-white font-medium hover:underline transition-colors"
+                  >
+                    Sign in
+                  </Link>
+                </p>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="john@example.com"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                required
-              />
+
+            {/* Right side - Form */}
+            <div className="p-8 md:p-10">
+              <CardHeader className="p-0 mb-8">
+                <CardTitle className="text-3xl font-bold text-gray-900">Create Account</CardTitle>
+                <CardDescription className="text-gray-500">
+                  Fill in your details to get started
+                </CardDescription>
+              </CardHeader>
+              
+              <CardContent className="p-0">
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName" className="text-gray-700">First Name</Label>
+                      <Input
+                        id="firstName"
+                        type="text"
+                        placeholder="John"
+                        value={formData.firstName}
+                        onChange={(e) => handleInputChange('firstName', e.target.value)}
+                        className="py-3 px-4 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName" className="text-gray-700">Last Name</Label>
+                      <Input
+                        id="lastName"
+                        type="text"
+                        placeholder="Doe"
+                        value={formData.lastName}
+                        onChange={(e) => handleInputChange('lastName', e.target.value)}
+                        className="py-3 px-4 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-gray-700">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="john@example.com"
+                      value={formData.email}
+                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      className="py-3 px-4 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="text-gray-700">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="+1 (123) 456-7890"
+                      value={formData.phone}
+                      onChange={(e) => handleInputChange('phone', e.target.value)}
+                      className="py-3 px-4 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="password" className="text-gray-700">Password</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={formData.password}
+                        onChange={(e) => handleInputChange('password', e.target.value)}
+                        className="py-3 px-4 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword" className="text-gray-700">Confirm Password</Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        placeholder="••••••••"
+                        value={formData.confirmPassword}
+                        onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                        className="py-3 px-4 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3 pt-2">
+                    <Checkbox
+                      id="terms"
+                      checked={formData.agreeToTerms}
+                      onCheckedChange={(checked) => 
+                        setFormData(prev => ({ ...prev, agreeToTerms: checked === true }))
+                      }
+                      className="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <Label htmlFor="terms" className="text-sm text-gray-600">
+                      I agree to the{' '}
+                      <Link to="/terms" className="text-blue-500 hover:text-blue-600 font-medium transition-colors">
+                        Terms and Conditions
+                      </Link>
+                    </Label>
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-sm"
+                  >
+                    Create Account
+                  </Button>
+                </form>
+
+                <div className="mt-6 text-center md:hidden">
+                  <p className="text-sm text-gray-600">
+                    Already have an account?{' '}
+                    <Link 
+                      to="/login" 
+                      className="text-blue-500 hover:text-blue-600 font-medium transition-colors"
+                    >
+                      Sign in
+                    </Link>
+                  </p>
+                </div>
+              </CardContent>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={formData.password}
-                onChange={(e) => handleInputChange('password', e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="Confirm your password"
-                value={formData.confirmPassword}
-                onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                required
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="terms"
-                checked={formData.agreeToTerms}
-                onCheckedChange={(checked) => 
-                  setFormData(prev => ({ ...prev, agreeToTerms: checked === true }))
-                }
-              />
-              <Label htmlFor="terms" className="text-sm text-gray-600">
-                I agree to the{' '}
-                <Link to="/terms" className="text-blue-400 hover:text-blue-500 transition-colors">
-                  Terms and Conditions
-                </Link>
-              </Label>
-            </div>
-            <Button type="submit" className="w-full bg-blue-400 hover:bg-blue-500">
-              Create Account
-            </Button>
-          </form>
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{' '}
-              <Link 
-                to="/login" 
-                className="text-blue-400 hover:text-blue-500 font-medium transition-colors"
-              >
-                Sign in
-              </Link>
-            </p>
           </div>
-        </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 };

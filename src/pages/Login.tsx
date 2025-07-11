@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -17,70 +16,106 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex justify-center mb-4">
-            <img 
-              src="/placeholder.svg" 
-              alt="SkillBridge Logo" 
-              className="h-12 w-12"
-            />
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-6">
+      <div className="w-full max-w-4xl mx-auto">
+        <Card className="w-full shadow-xl rounded-2xl overflow-hidden border-0">
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            {/* Left side - Branding */}
+            <div className="hidden md:flex bg-gradient-to-br from-blue-500 to-blue-600 p-10 text-white flex-col justify-between">
+              <div>
+                <img 
+                  src="/assets/logo2.png" 
+                  alt="SkillBridge Logo" 
+                  className="h-40 w-40 mb-6"
+                />
+                <h2 className="text-3xl font-bold mb-4">Welcome Back to SkillBridge</h2>
+                <p className="text-blue-100">
+                  Continue your learning journey with access to thousands of courses and expert instructors.
+                </p>
+              </div>
+              <div className="mt-8">
+                <p className="text-blue-100 text-sm">
+                  Don't have an account?{' '}
+                  <Link 
+                    to="/signup" 
+                    className="text-white font-medium hover:underline transition-colors"
+                  >
+                    Sign up
+                  </Link>
+                </p>
+              </div>
+            </div>
+
+            {/* Right side - Form */}
+            <div className="p-8 md:p-10">
+              <CardHeader className="p-0 mb-8">
+                <CardTitle className="text-3xl font-bold text-gray-900">Sign In</CardTitle>
+                <CardDescription className="text-gray-500">
+                  Enter your credentials to access your account
+                </CardDescription>
+              </CardHeader>
+              
+              <CardContent className="p-0">
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-gray-700">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="john@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="py-3 px-4 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-gray-700">Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="py-3 px-4 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <Link 
+                      to="/forgot-password" 
+                      className="text-sm text-blue-500 hover:text-blue-600 font-medium transition-colors"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-sm"
+                  >
+                    Sign In
+                  </Button>
+                </form>
+
+                <div className="mt-6 text-center md:hidden">
+                  <p className="text-sm text-gray-600">
+                    Don't have an account?{' '}
+                    <Link 
+                      to="/signup" 
+                      className="text-blue-500 hover:text-blue-600 font-medium transition-colors"
+                    >
+                      Sign up
+                    </Link>
+                  </p>
+                </div>
+              </CardContent>
+            </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-center">Welcome back</CardTitle>
-          <CardDescription className="text-center">
-            Sign in to your SkillBridge account
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Link 
-                to="/forgot-password" 
-                className="text-sm text-blue-400 hover:text-blue-500 transition-colors"
-              >
-                Forgot password?
-              </Link>
-            </div>
-            <Button type="submit" className="w-full bg-blue-400 hover:bg-blue-500">
-              Sign In
-            </Button>
-          </form>
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Link 
-                to="/signup" 
-                className="text-blue-400 hover:text-blue-500 font-medium transition-colors"
-              >
-                Sign up
-              </Link>
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 };

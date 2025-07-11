@@ -109,7 +109,7 @@ const Footer = () => {
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="text-gray-400 text-sm">
-              © {currentYear} SkillBridge. All rights reserved. Made with ❤️ for Bharat.
+              © {currentYear} SkillBridge. All rights reserved. made by team Ryomen.
             </div>
             <div className="flex items-center space-x-6">
               <span className="text-gray-400 text-sm">Powered by IndicBERT & LLaMA 3.1</span>
