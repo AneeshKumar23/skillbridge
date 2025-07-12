@@ -5,14 +5,16 @@ from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from fastapi import Request, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
-from google import genai
 import uuid
 import json
 import os
 from model import *
 from utils import *
 from config import *
-
+from pydantic import BaseModel
+import google.generativeai as genai
+import requests
+from fastapi import Query
 # ----- Load Environment Variables -----
 load_dotenv()
 MONGO_URL = os.getenv("MONGO_URL")
@@ -21,6 +23,12 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # ----- FastAPI App Initialization -----
 app = FastAPI()
+genai.configure(api_key=GEMINI_API_KEY)
+
+
+YOUTUBE_SEARCH_URL = "https://www.youtube.com/results"
+WIKIPEDIA_API_URL = "https://en.wikipedia.org/api/rest_v1/page/summary/"
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -43,6 +51,8 @@ outputs_collection = db["user_outputs"]
 class SkillSuggestionRequest(BaseModel):
     prompt: str
 
+class PromptInput(BaseModel):
+    prompt: str
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -126,8 +136,8 @@ async def get_user(user_id: str):
 
 # ---- Routes: Prompt Management ----
 @app.post("/prompts/{user_id}")
-async def add_prompt(user_id: str, prompt: str):
-    return await PromptService.add_prompt(user_id, prompt)
+async def add_prompt(user_id: str, prompt_input: PromptInput):
+    return await PromptService.add_prompt(user_id, prompt_input.prompt)
 
 @app.get("/prompts/{user_id}")
 async def get_prompts(user_id: str):
@@ -254,3 +264,66 @@ async def suggest_skills(req: SkillSuggestionRequest):
     except Exception as e:
         print(f"❌ Error from Gemini: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/chat/{user_id}")
+async def chat_with_ai(user_id: str, request: PromptInput):
+    prompt = request.prompt.strip()
+
+    if not prompt:
+        raise HTTPException(status_code=400, detail="Prompt is required")
+
+    try:
+        # Configure Gemini API
+        genai.configure(api_key=GEMINI_API_KEY)
+
+        # Gemini model setup
+        model = genai.GenerativeModel(model_name="gemini-2.5-pro")
+
+        # ✅ Instructional wrapper to enforce formatting
+        formatted_prompt = f"""
+You are an AI teaching assistant. Answer the user’s query **clearly and in well-structured Markdown**.
+
+**Always include:**
+- `###` headings
+- bullet points (`-`)
+- code blocks using triple backticks with language (e.g., ```js or ```python)
+- short explanations
+- simple examples
+
+Query: "{prompt}"
+"""
+
+        # Generate response from Gemini
+        response = model.generate_content(formatted_prompt)
+        ai_response = response.text.strip()
+
+        # Store in output collection
+        await OutputService.add_output(user_id, ai_response)
+
+        return {"response": ai_response}
+
+    except Exception as e:
+        print("❌ AI generation failed:", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+@app.get("/resources/youtube")
+async def get_youtube_resources(query: str = Query(..., description="Search topic for YouTube")):
+    search_url = f"https://www.youtube.com/results?search_query={query}"
+    return {"youtube_search_url": search_url}
+
+@app.get("/resources/wiki")
+async def get_wikipedia_article(query: str = Query(..., description="Search topic for Wikipedia")):
+    search_term = query.replace(" ", "_")
+    url = f"{WIKIPEDIA_API_URL}{search_term}"
+    response = requests.get(url)
+    if response.status_code != 200:
+        raise HTTPException(status_code=404, detail="Wikipedia article not found")
+    data = response.json()
+    return {
+        "title": data.get("title"),
+        "description": data.get("extract"),
+        "url": data.get("content_urls", {}).get("desktop", {}).get("page", "")
+    }

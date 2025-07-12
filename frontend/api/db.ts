@@ -160,3 +160,53 @@ export const markSubtopicComplete = async (
 
   return response.json();
 };
+
+
+export const getPrompts = async (userId: string) => {
+    const response = await fetch(`${API_BASE_URL}/prompts/${userId}`, {
+      method: 'GET',
+    });
+  
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to fetch prompts');
+    }
+  
+    return response.json();
+  };
+
+
+  
+  export const addPrompt = async (userId: string, prompt: string) => {
+    const response = await fetch(`${API_BASE_URL}/prompts/${userId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prompt }), // or just JSON.stringify(prompt) if backend expects raw string
+    });
+  
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to add prompt');
+    }
+  
+    return response.json();
+  };
+  
+
+
+export const sendPromptToAI = async (userId: string, prompt: string) => {
+    const response = await fetch(`${API_BASE_URL}/chat/${userId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    });
+  
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to get AI response');
+    }
+  
+    return response.json(); // { response: "..." }
+  };

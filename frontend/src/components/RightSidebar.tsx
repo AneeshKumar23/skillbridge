@@ -70,7 +70,12 @@ export const RightSidebar: React.FC = () => {
           {/* Content */}
           <div className="flex-1 overflow-hidden">
             {activeTab === 'references' ? (
-              <Reference isExpanded={isExpanded} onToggle={toggleExpanded} />
+              <Reference
+              isExpanded={isExpanded}
+              onToggle={toggleExpanded}
+              prompt={"Explain React hooks"} // <-- Replace with dynamic prompt state
+            />
+            
             ) : (
               <LearningPath />
             )}
