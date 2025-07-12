@@ -28,31 +28,41 @@ const Signup = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+  
     if (formData.password !== formData.confirmPassword) {
       alert('Passwords do not match');
       return;
     }
-
+  
     if (!/^[\d\s+-]{10,}$/.test(formData.phone)) {
       alert('Please enter a valid phone number');
       return;
     }
-
+  
     if (!formData.agreeToTerms) {
       alert('Please agree to the terms and conditions');
       return;
     }
-
+  
     try {
       const response = await signup(formData);
       console.log('Signup successful:', response);
+  
+      
+      if (response.id) {
+        localStorage.setItem('user_id', response.id);
+      } else {
+        console.warn("No user ID returned in response.");
+      }
+  
+      
       navigate('/onboarding');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Signup error:', error);
-      alert(error.message);
+      alert(error.message || 'Signup failed');
     }
   };
+  
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-6">
