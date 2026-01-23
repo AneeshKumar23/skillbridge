@@ -8,7 +8,7 @@ import random
 
 
 load_dotenv()
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+client = genai.Client(api_key=os.getenv("MODEL_API_KEY"))
 
 
 def search_youtube(query, max_results=5):

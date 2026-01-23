@@ -107,11 +107,10 @@ export const ChatContainer: React.FC = () => {
         {messages.map((message) => (
           <div key={message.id} className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}>
             <div
-              className={`max-w-[90%] lg:max-w-2xl px-4 py-2 rounded-lg ${
-                message.isUser
-                  ? 'bg-blue-500 text-white rounded-br-none'
-                  : 'bg-gray-100 text-gray-900 rounded-bl-none'
-              }`}
+              className={`max-w-[90%] lg:max-w-2xl px-4 py-2 rounded-lg ${message.isUser
+                ? 'bg-blue-500 text-white rounded-br-none'
+                : 'bg-gray-100 text-gray-900 rounded-bl-none'
+                }`}
             >
               <ReactMarkdown
                 children={message.content}

@@ -19,11 +19,12 @@ from fastapi import Query
 load_dotenv()
 MONGO_URL = os.getenv("MONGO_URL")
 DATABASE_NAME = os.getenv("DATABASE_NAME")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+MODEL_API_KEY = os.getenv("MODEL_API_KEY")
+MODEL_NAME = os.getenv("MODEL_NAME")
 
 # ----- FastAPI App Initialization -----
 app = FastAPI()
-genai.configure(api_key=GEMINI_API_KEY)
+genai.configure(api_key=MODEL_API_KEY)
 
 
 YOUTUBE_SEARCH_URL = "https://www.youtube.com/results"
@@ -76,7 +77,8 @@ class UserService:
         user = await users_collection.find_one({"id": user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        user["_id"] = str(user["_id"])
+        if "_id" in user:
+            del user["_id"]
         return user
 
     @staticmethod
@@ -105,6 +107,8 @@ class PromptService:
     @staticmethod
     async def get_prompts(user_id: str):
         doc = await prompts_collection.find_one({"id": user_id})
+        if doc and "_id" in doc:
+            del doc["_id"]
         return doc or {"id": user_id, "prompts": []}
 
 class OutputService:
@@ -120,10 +124,9 @@ class OutputService:
     @staticmethod
     async def get_outputs(user_id: str):
         doc = await outputs_collection.find_one({"id": user_id})
-        if doc:
-            doc["_id"] = str(doc["_id"])
-            return doc
-        return {"id": user_id, "outputs": []}
+        if doc and "_id" in doc:
+            del doc["_id"]
+        return doc or {"id": user_id, "outputs": []}
 
 # ---- Routes: User Management ----
 @app.post("/users/")
@@ -160,9 +163,9 @@ async def generate_content_endpoint(payload: dict):
         raise HTTPException(status_code=400, detail="Prompt is required")
 
     try:
-        client = genai.Client(api_key=GEMINI_API_KEY)
+        client = genai.Client(api_key=MODEL_API_KEY)
         response = client.models.generate_content(
-            model="gemini-2.5-pro",
+            model=MODEL_NAME,
             contents=BASE_PROMPT + prompt,
         )
         response_text = response.text[7:-3]  # clean response
@@ -252,7 +255,7 @@ async def suggest_skills(req: SkillSuggestionRequest):
         raise HTTPException(status_code=400, detail="Prompt is required")
 
     try:
-        model = genai.GenerativeModel("gemini-2.5-pro")
+        model = genai.GenerativeModel(MODEL_NAME)
         response = model.generate_content(
             f"Based on the user's interest: '{prompt}', suggest 5-10 relevant digital skills. Respond only with a comma-separated list."
         )
@@ -265,6 +268,8 @@ async def suggest_skills(req: SkillSuggestionRequest):
         print(f"❌ Error from Gemini: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     
+
+
 @app.post("/chat/{user_id}")
 async def chat_with_ai(user_id: str, request: PromptInput):
     prompt = request.prompt.strip()
@@ -274,10 +279,10 @@ async def chat_with_ai(user_id: str, request: PromptInput):
 
     try:
         # Configure Gemini API
-        genai.configure(api_key=GEMINI_API_KEY)
+        genai.configure(api_key=MODEL_API_KEY)
 
         # Gemini model setup
-        model = genai.GenerativeModel(model_name="gemini-2.5-pro")
+        model = genai.GenerativeModel(MODEL_NAME)
 
         # ✅ Instructional wrapper to enforce formatting
         formatted_prompt = f"""
@@ -314,12 +319,17 @@ async def get_youtube_resources(query: str = Query(..., description="Search topi
     search_url = f"https://www.youtube.com/results?search_query={query}"
     return {"youtube_search_url": search_url}
 
+
+
 @app.get("/resources/wiki")
 async def get_wikipedia_article(query: str = Query(..., description="Search topic for Wikipedia")):
     search_term = query.replace(" ", "_")
     url = f"{WIKIPEDIA_API_URL}{search_term}"
+    print(f"🔍 Fetching Wikipedia from: {url}")
     response = requests.get(url)
+    print(f"📊 Wikipedia response status: {response.status_code}")
     if response.status_code != 200:
+        print(f"❌ Wikipedia article not found for: {search_term}")
         raise HTTPException(status_code=404, detail="Wikipedia article not found")
     data = response.json()
     return {
