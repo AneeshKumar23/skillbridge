@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, CheckCircle, Circle, Target, BookOpen, Clock, Award } from 'lucide-react';
+import { generateLearningPath } from '../../../api/db';
 
 interface LearningNode {
   id: string;
@@ -10,74 +11,51 @@ interface LearningNode {
   children?: LearningNode[];
 }
 
-import { getCurriculum } from '../../../api/db';
-
 interface LearningPathProps {
-  userId: string;
-  onNodeSelect: (topic: string) => void;
+  prompt?: string;
 }
 
-export const LearningPath: React.FC<LearningPathProps> = ({ userId, onNodeSelect }) => {
+export const LearningPath: React.FC<LearningPathProps> = ({ prompt }) => {
+  const [nodes, setNodes] = useState<LearningNode[]>([]);
+  const [loading, setLoading] = useState(false);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
-  const [learningData, setLearningData] = useState<LearningNode[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchCurriculum = async () => {
-      try {
-        setLoading(true);
-        const data = await getCurriculum(userId);
-
-        // Transform API data to LearningNode structure
-        // Assuming API returns { roadmap: [ { topic, subtopics } ] }
-        // Adjust this based on actual API response structure!
-        // Based on generate_roadmap in backend, it seems to return a list of topics.
-
-        /* 
-           The backend `generate_curriculum` returns { "roadmap": [...] }
-           where each item has: 
-           { "topic": "...", "subtopics": [ { "subtopic": "...", "status": "..." } ], "status": "..." }
-        */
-
-        const transformData = (roadmap: any[]): LearningNode[] => {
-          return roadmap.map((item, index) => ({
-            id: `node-${index}`,
-            title: item.topic,
-            completed: item.status === 'completed',
-            progress: item.status === 'in_progress' ? 50 : 0,
-            duration: item.duration || 'Flexible',
-            children: item.subtopics?.map((sub: any, subIndex: number) => ({
-              id: `node-${index}-${subIndex}`,
-              title: sub.subtopic,
-              completed: sub.status === 'completed',
-              duration: sub.duration || '2-3 days'
-            }))
-          }));
-        };
-
-        if (data.roadmap) {
-          setLearningData(transformData(data.roadmap));
-          // Expand first node by default
-          setExpandedNodes(new Set(['node-0']));
-          // Select first topic by default
-          if (data.roadmap.length > 0) {
-            onNodeSelect(data.roadmap[0].topic);
-          }
-        }
-
-      } catch (error) {
-        console.error("Failed to load curriculum:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (userId) {
-      fetchCurriculum();
+    if (prompt) {
+      loadPath(prompt);
     }
-  }, [userId, onNodeSelect]);
+  }, [prompt]);
 
-  const toggleNode = (nodeId: string, title?: string) => {
+  const loadPath = async (searchPrompt: string) => {
+    setLoading(true);
+    try {
+      const data = await generateLearningPath(searchPrompt);
+      if (data && data.milestones) {
+        const newNodes: LearningNode[] = data.milestones.map((m: any, i: number) => ({
+          id: `${i}`,
+          title: m.main_goal,
+          completed: false,
+          progress: 0,
+          children: m.sub_goals?.map((sub: string, j: number) => ({
+            id: `${i}.${j}`,
+            title: sub,
+            completed: false
+          }))
+        }));
+        setNodes(newNodes);
+        // Expand first node by default
+        if (newNodes.length > 0) {
+            setExpandedNodes(new Set([newNodes[0].id]));
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load learning path", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleNode = (nodeId: string) => {
     const newExpanded = new Set(expandedNodes);
     if (newExpanded.has(nodeId)) {
       newExpanded.delete(nodeId);
@@ -85,11 +63,6 @@ export const LearningPath: React.FC<LearningPathProps> = ({ userId, onNodeSelect
       newExpanded.add(nodeId);
     }
     setExpandedNodes(newExpanded);
-
-    // Also select the topic when expanding/clicking
-    if (title) {
-      onNodeSelect(title);
-    }
   };
 
   const getStatusColor = (completed: boolean, progress?: number) => {
@@ -114,13 +87,14 @@ export const LearningPath: React.FC<LearningPathProps> = ({ userId, onNodeSelect
         {level === 0 && !isLast && (
           <div className="absolute left-6 top-12 w-0.5 h-full bg-gray-200"></div>
         )}
-
+        
         {/* Node Container */}
         <div className="flex items-start space-x-4 mb-6">
           {/* Timeline Dot */}
           <div className="relative flex-shrink-0">
-            <div className={`w-12 h-12 rounded-full border-4 border-white shadow-lg flex items-center justify-center ${node.completed ? 'bg-green-500' : node.progress ? 'bg-blue-500' : 'bg-gray-300'
-              }`}>
+            <div className={`w-12 h-12 rounded-full border-4 border-white shadow-lg flex items-center justify-center ${
+              node.completed ? 'bg-green-500' : node.progress ? 'bg-blue-500' : 'bg-gray-300'
+            }`}>
               {node.completed ? (
                 <CheckCircle className="w-6 h-6 text-white" />
               ) : node.progress ? (
@@ -129,7 +103,7 @@ export const LearningPath: React.FC<LearningPathProps> = ({ userId, onNodeSelect
                 <Circle className="w-6 h-6 text-white" />
               )}
             </div>
-
+            
             {/* Progress Ring */}
             {node.progress !== undefined && !node.completed && (
               <svg className="absolute inset-0 w-12 h-12 transform -rotate-90">
@@ -160,9 +134,10 @@ export const LearningPath: React.FC<LearningPathProps> = ({ userId, onNodeSelect
           {/* Content */}
           <div className="flex-1 min-w-0">
             <div
-              className={`bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-200 ${hasChildren ? 'cursor-pointer' : ''
-                }`}
-              onClick={() => hasChildren && toggleNode(node.id, node.title)}
+              className={`bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-200 ${
+                hasChildren ? 'cursor-pointer' : ''
+              }`}
+              onClick={() => hasChildren && toggleNode(node.id)}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -176,15 +151,16 @@ export const LearningPath: React.FC<LearningPathProps> = ({ userId, onNodeSelect
                         )}
                       </button>
                     )}
-                    <h4 className={`font-semibold ${node.completed ? 'text-green-700' : 'text-gray-900'
-                      }`}>
+                    <h4 className={`font-semibold ${
+                      node.completed ? 'text-green-700' : 'text-gray-900'
+                    }`}>
                       {node.title}
                     </h4>
                     {node.completed && (
                       <Award className="w-4 h-4 text-yellow-500" />
                     )}
                   </div>
-
+                  
                   <div className="flex items-center space-x-4 text-sm text-gray-500">
                     {node.duration && (
                       <div className="flex items-center space-x-1">
@@ -219,21 +195,23 @@ export const LearningPath: React.FC<LearningPathProps> = ({ userId, onNodeSelect
                     {index < node.children!.length - 1 && (
                       <div className="absolute left-6 top-8 w-0.5 h-full bg-gray-200"></div>
                     )}
-
+                    
                     <div className="flex items-start space-x-3">
-                      <div className={`w-12 h-12 rounded-full border-2 border-white shadow flex items-center justify-center ${child.completed ? 'bg-green-100' : 'bg-gray-100'
-                        }`}>
+                      <div className={`w-12 h-12 rounded-full border-2 border-white shadow flex items-center justify-center ${
+                        child.completed ? 'bg-green-100' : 'bg-gray-100'
+                      }`}>
                         {child.completed ? (
                           <CheckCircle className="w-5 h-5 text-green-500" />
                         ) : (
                           <Circle className="w-5 h-5 text-gray-400" />
                         )}
                       </div>
-
+                      
                       <div className="flex-1 bg-white rounded-lg border border-gray-100 p-3 hover:border-gray-200 transition-colors">
                         <div className="flex items-center justify-between">
-                          <h5 className={`text-sm font-medium ${child.completed ? 'text-green-700' : 'text-gray-900'
-                            }`}>
+                          <h5 className={`text-sm font-medium ${
+                            child.completed ? 'text-green-700' : 'text-gray-900'
+                          }`}>
                             {child.title}
                           </h5>
                           {child.duration && (
@@ -255,25 +233,33 @@ export const LearningPath: React.FC<LearningPathProps> = ({ userId, onNodeSelect
     );
   };
 
-  const completedCount = learningData.reduce((acc, node) => {
+  const completedCount = nodes.reduce((acc, node) => {
     const nodeCompleted = node.completed ? 1 : 0;
     const childrenCompleted = node.children?.filter(child => child.completed).length || 0;
     return acc + nodeCompleted + childrenCompleted;
   }, 0);
 
-  const totalCount = learningData.reduce((acc, node) => {
+  const totalCount = nodes.reduce((acc, node) => {
     return acc + 1 + (node.children?.length || 0);
   }, 0);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full text-gray-500">
-        <div className="flex flex-col items-center space-y-2">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-          <span>Loading your personalized path...</span>
+      return (
+        <div className="flex flex-col items-center justify-center p-8 text-center h-full">
+            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-gray-500">Generating Personal Learning Path for "{prompt}"...</p>
         </div>
-      </div>
-    );
+      );
+  }
+
+  if (nodes.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center p-8 text-center h-full">
+            <BookOpen className="w-12 h-12 text-gray-300 mb-2" />
+            <p className="text-gray-500">No learning path generated yet.</p>
+            <p className="text-xs text-gray-400 mt-1">Prompt: {prompt || 'None'}</p>
+        </div>
+      );
   }
 
   return (
@@ -294,12 +280,12 @@ export const LearningPath: React.FC<LearningPathProps> = ({ userId, onNodeSelect
       <div className="p-4 bg-blue-50 border-b border-gray-200">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-blue-900">Overall Progress</span>
-          <span className="text-sm text-blue-700">{Math.round((completedCount / totalCount) * 100)}%</span>
+          <span className="text-sm text-blue-700">{Math.round((completedCount / (totalCount || 1)) * 100)}%</span>
         </div>
         <div className="w-full bg-blue-200 rounded-full h-2">
           <div
             className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${(completedCount / totalCount) * 100}%` }}
+            style={{ width: `${(completedCount / (totalCount || 1)) * 100}%` }}
           ></div>
         </div>
       </div>
@@ -307,8 +293,8 @@ export const LearningPath: React.FC<LearningPathProps> = ({ userId, onNodeSelect
       {/* Timeline */}
       <div className="flex-1 overflow-y-auto p-4">
         <div className="space-y-2">
-          {learningData.map((node, index) =>
-            renderTimelineNode(node, 0, index === learningData.length - 1)
+          {nodes.map((node, index) => 
+            renderTimelineNode(node, 0, index === nodes.length - 1)
           )}
         </div>
       </div>

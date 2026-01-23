@@ -12,6 +12,7 @@ type PageType = 'chat' | 'certificates' | 'settings';
 export const Chat: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState<PageType>('chat');
+  const [currentPrompt, setCurrentPrompt] = useState<string>('');
   const { user, isLoading } = useUser();
   const navigate = useNavigate();
 
@@ -20,6 +21,13 @@ export const Chat: React.FC = () => {
       navigate('/login');
     }
   }, [user, isLoading, navigate]);
+
+  // Use user's first skill as fallback prompt for sidebar
+  useEffect(() => {
+    if (user && user.skills && user.skills.length > 0 && !currentPrompt) {
+      setCurrentPrompt(user.skills[0]);
+    }
+  }, [user, currentPrompt]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -81,12 +89,12 @@ export const Chat: React.FC = () => {
         {/* Chat Container */}
         <div className="flex-1 p-2 sm:p-4 pr-12 sm:pr-16 lg:ml-0">
           <div className="h-full">
-            <ChatContainer userId={user.id} />
+            <ChatContainer userId={user.id} onPromptChange={setCurrentPrompt} />
           </div>
         </div>
 
         {/* Right Sidebar */}
-        <RightSidebar />
+        <RightSidebar currentPrompt={currentPrompt} />
       </div>
     </div>
   );

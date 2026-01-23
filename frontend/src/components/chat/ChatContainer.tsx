@@ -15,9 +15,10 @@ interface Message {
 
 interface ChatContainerProps {
   userId: string;
+  onPromptChange?: (prompt: string) => void;
 }
 
-export const ChatContainer: React.FC<ChatContainerProps> = ({ userId }) => {
+export const ChatContainer: React.FC<ChatContainerProps> = ({ userId, onPromptChange }) => {
   const [messages, setMessages] = useState<Message[]>([]);
 
   useEffect(() => {
@@ -40,6 +41,11 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ userId }) => {
           },
           ...loadedMessages,
         ]);
+        
+        // Restore last prompt context
+        if (data.prompts && data.prompts.length > 0 && onPromptChange) {
+            onPromptChange(data.prompts[data.prompts.length - 1]);
+        }
       } catch (err) {
         console.error('Failed to load prompts:', err);
       }
@@ -55,6 +61,10 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ userId }) => {
       isUser: true,
       timestamp: new Date(),
     };
+    
+    if (onPromptChange) {
+      onPromptChange(message);
+    }
 
     setMessages((prev) => [...prev, userMessage]);
 

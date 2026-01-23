@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'; // Your FastAPI server URL
+const API_BASE_URL = 'http://localhost:8000'; // Your FastAPI server URL
 
 interface SignupData {
   firstName: string;
@@ -52,19 +52,6 @@ export const signup = async (data: SignupData) => {
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.detail || 'Signup failed');
-  }
-
-  return response.json();
-};
-
-export const getUser = async (userId: string) => {
-  const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
-    method: 'GET',
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Failed to fetch user');
   }
 
   return response.json();
@@ -174,7 +161,21 @@ export const markSubtopicComplete = async (
   return response.json();
 };
 
+// --- USER ---
+export const getUser = async (userId: string) => {
+  const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+    method: 'GET',
+  });
 
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to fetch user');
+  }
+
+  return response.json();
+};
+
+// --- PROMPTS ---
 export const getPrompts = async (userId: string) => {
   const response = await fetch(`${API_BASE_URL}/prompts/${userId}`, {
     method: 'GET',
@@ -188,15 +189,10 @@ export const getPrompts = async (userId: string) => {
   return response.json();
 };
 
-
-
 export const addPrompt = async (userId: string, prompt: string) => {
-  const response = await fetch(`${API_BASE_URL}/prompts/${userId}`, {
+  // Backend expects prompt as query parameter
+  const response = await fetch(`${API_BASE_URL}/prompts/${userId}?prompt=${encodeURIComponent(prompt)}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ prompt }), // or just JSON.stringify(prompt) if backend expects raw string
   });
 
   if (!response.ok) {
@@ -207,10 +203,10 @@ export const addPrompt = async (userId: string, prompt: string) => {
   return response.json();
 };
 
-
-
+// --- AI / CHAT ---
 export const sendPromptToAI = async (userId: string, prompt: string) => {
-  const response = await fetch(`${API_BASE_URL}/chat/${userId}`, {
+  // Use /api/suggest_skills as the closest valid AI endpoint for chat response
+  const response = await fetch(`${API_BASE_URL}/api/suggest_skills`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ prompt }),
@@ -221,7 +217,12 @@ export const sendPromptToAI = async (userId: string, prompt: string) => {
     throw new Error(errorData.detail || 'Failed to get AI response');
   }
 
-  return response.json(); // { response: "..." }
+  const data = await response.json();
+  const aiResponse = data.skills && data.skills.length > 0
+    ? `Here are some suggested skills based on "${prompt}":\n\n- ${data.skills.join('\n- ')}`
+    : "I couldn't find specific skills for that topic, but I've updated your learning path!";
+
+  return { response: aiResponse };
 };
 
 export const suggestSkills = async (prompt: string) => {
@@ -238,5 +239,22 @@ export const suggestSkills = async (prompt: string) => {
     throw new Error(errorData.detail || 'Failed to suggest skills');
   }
 
-  return response.json(); // { skills: [...] }
+  return response.json();
+};
+
+export const generateLearningPath = async (prompt: string) => {
+  const response = await fetch(`${API_BASE_URL}/api/generate_content`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ prompt }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to generate learning path');
+  }
+
+  return response.json();
 };

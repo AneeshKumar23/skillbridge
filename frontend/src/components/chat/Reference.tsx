@@ -33,34 +33,49 @@ export const Reference: React.FC<ReferenceProps> = ({ isExpanded, onToggle, prom
     const fetchResources = async () => {
       if (!prompt) return;
 
+      const newRefs: Reference[] = [];
+
       try {
-        const wikiRes = await fetch(`http://localhost:8000/resources/wiki?query=${prompt}`);
-        const youtubeRes = await fetch(`http://localhost:8000/resources/youtube?query=${prompt}`);
+        const wikiRes = await fetch(`http://localhost:8000/api/generate_article?prompt=${encodeURIComponent(prompt)}`, { method: 'POST' });
+        if (wikiRes.ok) {
+           const wikiData = await wikiRes.json();
+           if (wikiData.articles && Array.isArray(wikiData.articles)) {
+             wikiData.articles.forEach((article: any, index: number) => {
+               newRefs.push({
+                 id: `article-${index}`,
+                 title: article.title,
+                 type: 'document',
+                 url: article.link,
+                 description: `Read more about ${prompt} on ${new URL(article.link).hostname}`,
+               });
+             });
+           }
+        } else {
+             console.error("Wiki/Article fetch failed", wikiRes.status);
+        }
+      } catch (e) { console.error("Wiki fetch error", e); }
 
-        const wiki = await wikiRes.json();
-        const youtube = await youtubeRes.json();
+      try {
+        const youtubeRes = await fetch(`http://localhost:8000/api/generate_youtube_content?prompt=${encodeURIComponent(prompt)}`, { method: 'POST' });
+        if (youtubeRes.ok) {
+           const youtubeData = await youtubeRes.json();
+           if (youtubeData.materials && Array.isArray(youtubeData.materials)) {
+               youtubeData.materials.forEach((video: any, index: number) => {
+                   newRefs.push({
+                       id: `video-${index}`,
+                       title: video.title,
+                       type: 'video',
+                       url: video.link,
+                       description: youtubeData.description || video.title,
+                   });
+               });
+           }
+        } else {
+             console.error("Youtube fetch failed", youtubeRes.status);
+        }
+      } catch (e) { console.error("Youtube fetch error", e); }
 
-        const newRefs: Reference[] = [
-          {
-            id: 'wiki',
-            title: wiki.title || `Wikipedia: ${prompt}`,
-            type: 'document',
-            url: wiki.url,
-            description: wiki.description || `Wikipedia article about ${prompt}`,
-          },
-          {
-            id: 'youtube',
-            title: `YouTube Search: ${prompt}`,
-            type: 'link',
-            url: youtube.youtube_search_url,
-            description: `Click to explore YouTube videos about ${prompt}`,
-          },
-        ];
-
-        setReferences(newRefs);
-      } catch (error) {
-        console.error('Error fetching references:', error);
-      }
+      setReferences(newRefs);
     };
 
     fetchResources();
