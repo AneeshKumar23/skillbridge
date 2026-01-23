@@ -98,6 +98,8 @@ class PromptService:
     @staticmethod
     async def get_prompts(user_id: str):
         doc = await prompts_collection.find_one({"id": user_id})
+        if doc:
+            doc["_id"] = str(doc["_id"])
         return doc or {"id": user_id, "prompts": []}
 
 class OutputService:
