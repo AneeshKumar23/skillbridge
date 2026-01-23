@@ -13,9 +13,12 @@ interface Message {
   timestamp: Date;
 }
 
-export const ChatContainer: React.FC = () => {
+interface ChatContainerProps {
+  userId: string;
+}
+
+export const ChatContainer: React.FC<ChatContainerProps> = ({ userId }) => {
   const [messages, setMessages] = useState<Message[]>([]);
-  const userId = 'da682570422947809ad317ddcba73f39'; // Replace with actual logged-in user ID
 
   useEffect(() => {
     const loadPrompts = async () => {

@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { suggestSkills } from '../../../api/db';
+import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,13 +14,7 @@ interface SkillSlideProps {
   onNext: () => void;
 }
 
-const skillSuggestions = {
-  'programming': ['JavaScript', 'Python', 'React', 'Node.js', 'TypeScript', 'Java'],
-  'design': ['UI/UX Design', 'Figma', 'Adobe Photoshop', 'Illustrator', 'Sketch', 'Prototyping'],
-  'marketing': ['Digital Marketing', 'SEO', 'Social Media', 'Content Marketing', 'Email Marketing', 'Analytics'],
-  'business': ['Project Management', 'Leadership', 'Finance', 'Strategy', 'Communication', 'Data Analysis'],
-  'creative': ['Writing', 'Photography', 'Video Editing', 'Graphic Design', 'Music Production', 'Animation']
-};
+
 
 const SkillSlide = ({ formData, updateFormData, onNext }: SkillSlideProps) => {
   const [userInput, setUserInput] = useState('');
@@ -34,36 +30,41 @@ const SkillSlide = ({ formData, updateFormData, onNext }: SkillSlideProps) => {
     }
   }, [selectedSkills]);
 
+  const { toast } = useToast();
+
   const handleAIAnalysis = async () => {
     if (!userInput.trim()) return;
-    
+
     setIsAnalyzing(true);
     setShowSuggestions(false);
-    
-    // Simulate AI processing delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    const input = userInput.toLowerCase();
-    let suggestions: string[] = [];
 
-    Object.entries(skillSuggestions).forEach(([category, skills]) => {
-      if (input.includes(category) || skills.some(skill => input.includes(skill.toLowerCase()))) {
-        suggestions = [...suggestions, ...skills];
+    try {
+      const response = await suggestSkills(userInput);
+      if (response.skills && response.skills.length > 0) {
+        setSuggestedSkills(response.skills);
+        setShowSuggestions(true);
+      } else {
+        toast({
+          title: "No skills found",
+          description: "Try describing your interests in more detail.",
+          variant: "destructive",
+        });
       }
-    });
-
-    if (suggestions.length === 0) {
-      suggestions = [...skillSuggestions.programming, ...skillSuggestions.design].slice(0, 6);
+    } catch (error) {
+      console.error("AI Analysis failed:", error);
+      toast({
+        title: "Analysis Failed",
+        description: "Could not generate skills. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
     }
-
-    setSuggestedSkills([...new Set(suggestions)].slice(0, 6));
-    setShowSuggestions(true);
-    setIsAnalyzing(false);
   };
 
   const toggleSkill = (skill: string) => {
-    setSelectedSkills(prev => 
-      prev.includes(skill) 
+    setSelectedSkills(prev =>
+      prev.includes(skill)
         ? prev.filter(s => s !== skill)
         : [...prev, skill]
     );
@@ -81,23 +82,23 @@ const SkillSlide = ({ formData, updateFormData, onNext }: SkillSlideProps) => {
         {/* Header with progress */}
         <div className="flex flex-col items-center space-y-4">
           <div className="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center">
-            <img 
-              src="assets/logo.png" 
-              alt="Company Logo" 
+            <img
+              src="assets/logo.png"
+              alt="Company Logo"
               className="h-10 w-auto"
             />
           </div>
-          
+
           <div className="w-full max-w-md">
             <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div 
-                className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500" 
+              <div
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500"
                 style={{ width: '100%' }}
               ></div>
             </div>
             <div className="text-xs text-gray-500 text-center mt-2">Step 3 of 3</div>
           </div>
-          
+
           <div className="text-center space-y-2">
             <h1 className="text-3xl font-bold text-gray-900">Build Your Skills Profile</h1>
             <p className="text-gray-500 text-lg">Tell us about your interests and we'll suggest relevant skills</p>
@@ -105,7 +106,7 @@ const SkillSlide = ({ formData, updateFormData, onNext }: SkillSlideProps) => {
         </div>
 
         {/* AI Assistant Card */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
@@ -130,9 +131,9 @@ const SkillSlide = ({ formData, updateFormData, onNext }: SkillSlideProps) => {
                   onBlur={() => setInputFocus(false)}
                   className="flex-1 border-0 shadow-sm focus-visible:ring-0"
                 />
-                <Button 
-                  onClick={handleAIAnalysis} 
-                  size="icon" 
+                <Button
+                  onClick={handleAIAnalysis}
+                  size="icon"
                   className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-md"
                   disabled={isAnalyzing || !userInput.trim()}
                 >
@@ -175,11 +176,10 @@ const SkillSlide = ({ formData, updateFormData, onNext }: SkillSlideProps) => {
                       >
                         <Button
                           variant={selectedSkills.includes(skill) ? "default" : "outline"}
-                          className={`h-auto py-3 px-4 text-left justify-start rounded-lg transition-all ${
-                            selectedSkills.includes(skill)
-                              ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md'
-                              : 'hover:bg-blue-50 border-gray-200'
-                          }`}
+                          className={`h-auto py-3 px-4 text-left justify-start rounded-lg transition-all ${selectedSkills.includes(skill)
+                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md'
+                            : 'hover:bg-blue-50 border-gray-200'
+                            }`}
                           onClick={() => toggleSkill(skill)}
                         >
                           {skill}
@@ -215,8 +215,8 @@ const SkillSlide = ({ formData, updateFormData, onNext }: SkillSlideProps) => {
                       exit={{ opacity: 0, scale: 0.8 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <Badge 
-                        variant="secondary" 
+                      <Badge
+                        variant="secondary"
                         className="bg-blue-100 text-blue-800 hover:bg-blue-200 px-3 py-1.5 text-sm rounded-lg flex items-center"
                         onClick={() => toggleSkill(skill)}
                       >
@@ -238,7 +238,7 @@ const SkillSlide = ({ formData, updateFormData, onNext }: SkillSlideProps) => {
           transition={{ delay: 0.2 }}
           className="pt-4"
         >
-          <Button 
+          <Button
             onClick={handleNext}
             disabled={selectedSkills.length === 0}
             className="w-full sm:w-auto px-8 py-6 text-lg font-medium rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-md transition-all transform hover:scale-105 active:scale-100"

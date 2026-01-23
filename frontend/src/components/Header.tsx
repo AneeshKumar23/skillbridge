@@ -1,20 +1,29 @@
 import React from 'react';
 import { LogOut, User } from 'lucide-react';
+import { useUser } from '../context/UserContext';
+import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
   onMenuToggle: () => void;
+  user: {
+    first_name: string;
+    last_name: string;
+  } | null;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
+export const Header: React.FC<HeaderProps> = ({ onMenuToggle, user }) => {
+  const { logoutUser } = useUser();
+  const navigate = useNavigate();
+
   const handleLogout = () => {
-    // Handle logout logic here
-    console.log('Logging out...');
+    logoutUser();
+    navigate('/login');
   };
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
       <div className="flex items-center space-x-4">
-        <button 
+        <button
           onClick={onMenuToggle}
           className="md:hidden p-1 rounded-md hover:bg-gray-100"
         >
@@ -37,15 +46,17 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
         <div className="w-2 h-2 bg-green-400 rounded-full"></div>
         <span className="text-sm text-gray-500">AI Learning Assistant</span>
       </div>
-      
+
       <div className="flex items-center space-x-4">
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
             <User className="w-4 h-4 text-white" />
           </div>
-          <span className="text-sm font-medium text-gray-700">John Doe</span>
+          <span className="text-sm font-medium text-gray-700">
+            {user ? `${user.first_name} ${user.last_name}` : 'Guest'}
+          </span>
         </div>
-        
+
         <button
           onClick={handleLogout}
           className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"

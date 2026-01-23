@@ -6,9 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signup } from '../../api/db';
+import { useUser } from '../context/UserContext';
 
 const Signup = () => {
   const navigate = useNavigate();
+  const { loginUser } = useUser();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -28,41 +30,39 @@ const Signup = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-  
+
     if (formData.password !== formData.confirmPassword) {
       alert('Passwords do not match');
       return;
     }
-  
+
     if (!/^[\d\s+-]{10,}$/.test(formData.phone)) {
       alert('Please enter a valid phone number');
       return;
     }
-  
+
     if (!formData.agreeToTerms) {
       alert('Please agree to the terms and conditions');
       return;
     }
-  
+
     try {
       const response = await signup(formData);
       console.log('Signup successful:', response);
-  
-      
+
       if (response.id) {
-        localStorage.setItem('user_id', response.id);
+        await loginUser(response.id);
+        navigate('/onboarding');
       } else {
         console.warn("No user ID returned in response.");
+        alert('Signup failed: No ID returned');
       }
-  
-      
-      navigate('/onboarding');
     } catch (error: any) {
       console.error('Signup error:', error);
       alert(error.message || 'Signup failed');
     }
   };
-  
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-6">
@@ -72,9 +72,9 @@ const Signup = () => {
             {/* Left side - Branding */}
             <div className="hidden md:flex bg-gradient-to-br from-blue-500 to-blue-600 p-10 text-white flex-col justify-between">
               <div>
-                <img 
-                  src="/assets/logo2.png" 
-                  alt="SkillBridge Logo" 
+                <img
+                  src="/assets/logo2.png"
+                  alt="SkillBridge Logo"
                   className="h-40 w-40 mb-6"
                 />
                 <h2 className="text-3xl font-bold mb-4">Join SkillBridge Today</h2>
@@ -85,8 +85,8 @@ const Signup = () => {
               <div className="mt-8">
                 <p className="text-blue-100 text-sm">
                   Already have an account?{' '}
-                  <Link 
-                    to="/login" 
+                  <Link
+                    to="/login"
                     className="text-white font-medium hover:underline transition-colors"
                   >
                     Sign in
@@ -103,7 +103,7 @@ const Signup = () => {
                   Fill in your details to get started
                 </CardDescription>
               </CardHeader>
-              
+
               <CardContent className="p-0">
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -190,7 +190,7 @@ const Signup = () => {
                     <Checkbox
                       id="terms"
                       checked={formData.agreeToTerms}
-                      onCheckedChange={(checked) => 
+                      onCheckedChange={(checked) =>
                         setFormData(prev => ({ ...prev, agreeToTerms: checked === true }))
                       }
                       className="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -203,8 +203,8 @@ const Signup = () => {
                     </Label>
                   </div>
 
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-sm"
                   >
                     Create Account
@@ -214,8 +214,8 @@ const Signup = () => {
                 <div className="mt-6 text-center md:hidden">
                   <p className="text-sm text-gray-600">
                     Already have an account?{' '}
-                    <Link 
-                      to="/login" 
+                    <Link
+                      to="/login"
                       className="text-blue-500 hover:text-blue-600 font-medium transition-colors"
                     >
                       Sign in

@@ -5,20 +5,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { login } from '../../api/db';
+import { useUser } from '../context/UserContext';
 
 const Login = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+  const { loginUser } = useUser();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const response = await login({ email, password });
       console.log('Login successful:', response);
-      // Store user ID or token in state/context as needed
-      navigate('/dashboard'); // Redirect to dashboard after login
+
+      // Update global user state
+      if (response.user_id) {
+        await loginUser(response.user_id);
+        navigate('/chat');
+      } else {
+        throw new Error("User ID missing in response");
+      }
+
     } catch (error) {
       console.error('Login error:', error);
       alert(error.message);
@@ -33,9 +43,9 @@ const Login = () => {
             {/* Left side - Branding */}
             <div className="hidden md:flex bg-gradient-to-br from-blue-500 to-blue-600 p-10 text-white flex-col justify-between">
               <div>
-                <img 
-                  src="/assets/logo2.png" 
-                  alt="SkillBridge Logo" 
+                <img
+                  src="/assets/logo2.png"
+                  alt="SkillBridge Logo"
                   className="h-40 w-40 mb-6"
                 />
                 <h2 className="text-3xl font-bold mb-4">Welcome Back to SkillBridge</h2>
@@ -46,8 +56,8 @@ const Login = () => {
               <div className="mt-8">
                 <p className="text-blue-100 text-sm">
                   Don't have an account?{' '}
-                  <Link 
-                    to="/signup" 
+                  <Link
+                    to="/signup"
                     className="text-white font-medium hover:underline transition-colors"
                   >
                     Sign up
@@ -64,7 +74,7 @@ const Login = () => {
                   Enter your credentials to access your account
                 </CardDescription>
               </CardHeader>
-              
+
               <CardContent className="p-0">
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div className="space-y-2">
@@ -94,28 +104,27 @@ const Login = () => {
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <Link 
-                      to="/forgot-password" 
+                    <Link
+                      to="/forgot-password"
                       className="text-sm text-blue-500 hover:text-blue-600 font-medium transition-colors"
                     >
                       Forgot password?
                     </Link>
                   </div>
 
-                    <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-sm"
-                    onClick={() => window.location.href = '/chat'}
-                    >
+                  >
                     Sign In
-                    </Button>
+                  </Button>
                 </form>
 
                 <div className="mt-6 text-center md:hidden">
                   <p className="text-sm text-gray-600">
                     Don't have an account?{' '}
-                    <Link 
-                      to="/signup" 
+                    <Link
+                      to="/signup"
                       className="text-blue-500 hover:text-blue-600 font-medium transition-colors"
                     >
                       Sign up
