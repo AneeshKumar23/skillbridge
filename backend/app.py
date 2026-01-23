@@ -153,9 +153,8 @@ async def generate_content_endpoint(payload: dict):
         raise HTTPException(status_code=400, detail="Prompt is required")
 
     try:
-        client = genai.Client(api_key=MODEL_API_KEY)
-        response = client.models.generate_content(
-            model=MODEL_NAME,
+        client = genai.GenerativeModel(MODEL_NAME)
+        response = client.generate_content(
             contents=BASE_PROMPT + prompt,
         )
         response_text = response.text[7:-3]  # clean response
