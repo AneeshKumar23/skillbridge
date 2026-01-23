@@ -1,15 +1,15 @@
 from googleapiclient.discovery import build
-from google import genai
+import google.generativeai as genai
 from dotenv import load_dotenv
 import os
 import json
 from PIL import Image, ImageDraw, ImageFont
 import random
 
-
 load_dotenv()
-client = genai.Client(api_key=os.getenv("MODEL_API_KEY"))
 
+genai.configure(api_key=os.getenv("MODEL_API_KEY"))
+model = genai.GenerativeModel(model_name=os.getenv("MODEL_NAME", "gemma-3-27b-it"))
 
 def search_youtube(query, max_results=5):
     YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
@@ -67,8 +67,7 @@ Use this exact list for "materials":
 {json.dumps(video_links, indent=4)}
 """
 
-    response = client.models.generate_content(
-        model=os.getenv("MODEL_NAME"),
+    response = model.generate_content(
         contents=prompt,
     )
 
@@ -115,8 +114,7 @@ grab all the contents from internet and give the article links with title in the
     Do not include any additional text or explanations. No youtube links only the website links. Generate 5 article links with their titles.
 """
 
-    response = client.models.generate_content(
-        model=os.getenv("MODEL_NAME"),
+    response = model.generate_content(
         contents=base_prompt + prompt,
     )
 

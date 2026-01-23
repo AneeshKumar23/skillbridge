@@ -1,35 +1,29 @@
-from fastapi import FastAPI, HTTPException,  Depends
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
-from fastapi import Request, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel
+import google.generativeai as genai
 import uuid
 import json
 import os
 from model import *
 from utils import *
 from config import *
-from pydantic import BaseModel
-import google.generativeai as genai
-import requests
-from fastapi import Query
+
+
+
+
 # ----- Load Environment Variables -----
 load_dotenv()
 MONGO_URL = os.getenv("MONGO_URL")
 DATABASE_NAME = os.getenv("DATABASE_NAME")
-MODEL_API_KEY = os.getenv("MODEL_API_KEY")
-MODEL_NAME = os.getenv("MODEL_NAME")
-
-# ----- FastAPI App Initialization -----
-app = FastAPI()
 genai.configure(api_key=MODEL_API_KEY)
-
-
-YOUTUBE_SEARCH_URL = "https://www.youtube.com/results"
-WIKIPEDIA_API_URL = "https://en.wikipedia.org/api/rest_v1/page/summary/"
-
+# ---- FastAPI App Setup ----
+app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
@@ -52,8 +46,6 @@ outputs_collection = db["user_outputs"]
 class SkillSuggestionRequest(BaseModel):
     prompt: str
 
-class PromptInput(BaseModel):
-    prompt: str
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -77,8 +69,7 @@ class UserService:
         user = await users_collection.find_one({"id": user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        if "_id" in user:
-            del user["_id"]
+        user["_id"] = str(user["_id"])
         return user
 
     @staticmethod
@@ -107,8 +98,6 @@ class PromptService:
     @staticmethod
     async def get_prompts(user_id: str):
         doc = await prompts_collection.find_one({"id": user_id})
-        if doc and "_id" in doc:
-            del doc["_id"]
         return doc or {"id": user_id, "prompts": []}
 
 class OutputService:
@@ -124,9 +113,10 @@ class OutputService:
     @staticmethod
     async def get_outputs(user_id: str):
         doc = await outputs_collection.find_one({"id": user_id})
-        if doc and "_id" in doc:
-            del doc["_id"]
-        return doc or {"id": user_id, "outputs": []}
+        if doc:
+            doc["_id"] = str(doc["_id"])
+            return doc
+        return {"id": user_id, "outputs": []}
 
 # ---- Routes: User Management ----
 @app.post("/users/")
@@ -139,8 +129,8 @@ async def get_user(user_id: str):
 
 # ---- Routes: Prompt Management ----
 @app.post("/prompts/{user_id}")
-async def add_prompt(user_id: str, prompt_input: PromptInput):
-    return await PromptService.add_prompt(user_id, prompt_input.prompt)
+async def add_prompt(user_id: str, prompt: str):
+    return await PromptService.add_prompt(user_id, prompt)
 
 @app.get("/prompts/{user_id}")
 async def get_prompts(user_id: str):
@@ -267,73 +257,3 @@ async def suggest_skills(req: SkillSuggestionRequest):
     except Exception as e:
         print(f"❌ Error from Gemini: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-    
-
-
-@app.post("/chat/{user_id}")
-async def chat_with_ai(user_id: str, request: PromptInput):
-    prompt = request.prompt.strip()
-
-    if not prompt:
-        raise HTTPException(status_code=400, detail="Prompt is required")
-
-    try:
-        # Configure Gemini API
-        genai.configure(api_key=MODEL_API_KEY)
-
-        # Gemini model setup
-        model = genai.GenerativeModel(MODEL_NAME)
-
-        # ✅ Instructional wrapper to enforce formatting
-        formatted_prompt = f"""
-You are an AI teaching assistant. Answer the user’s query **clearly and in well-structured Markdown**.
-
-**Always include:**
-- `###` headings
-- bullet points (`-`)
-- code blocks using triple backticks with language (e.g., ```js or ```python)
-- short explanations
-- simple examples
-
-Query: "{prompt}"
-"""
-
-        # Generate response from Gemini
-        response = model.generate_content(formatted_prompt)
-        ai_response = response.text.strip()
-
-        # Store in output collection
-        await OutputService.add_output(user_id, ai_response)
-
-        return {"response": ai_response}
-
-    except Exception as e:
-        print("❌ AI generation failed:", e)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-
-
-@app.get("/resources/youtube")
-async def get_youtube_resources(query: str = Query(..., description="Search topic for YouTube")):
-    search_url = f"https://www.youtube.com/results?search_query={query}"
-    return {"youtube_search_url": search_url}
-
-
-
-@app.get("/resources/wiki")
-async def get_wikipedia_article(query: str = Query(..., description="Search topic for Wikipedia")):
-    search_term = query.replace(" ", "_")
-    url = f"{WIKIPEDIA_API_URL}{search_term}"
-    print(f"🔍 Fetching Wikipedia from: {url}")
-    response = requests.get(url)
-    print(f"📊 Wikipedia response status: {response.status_code}")
-    if response.status_code != 200:
-        print(f"❌ Wikipedia article not found for: {search_term}")
-        raise HTTPException(status_code=404, detail="Wikipedia article not found")
-    data = response.json()
-    return {
-        "title": data.get("title"),
-        "description": data.get("extract"),
-        "url": data.get("content_urls", {}).get("desktop", {}).get("page", "")
-    }
