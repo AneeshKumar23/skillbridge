@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
-import { updateOnboarding } from '../../api/db';
+import { updateOnboarding, generateCurriculum } from '../../api/db';
 import LanguageSlide from '@/components/onboarding/LanguageSlide';
 import LocationSlide from '@/components/onboarding/LocationSlide';
 import SkillSlide from '@/components/onboarding/SkillSlide';
@@ -44,6 +44,11 @@ const Onboarding = () => {
         country: formData.location.split(',')[1] || '',
       });
       console.log('Onboarding data saved successfully');
+
+      // Generate curriculum
+      await generateCurriculum(user.id);
+      console.log('Curriculum generated successfully');
+
       navigate('/chat');
     } catch (error) {
       console.error('Failed to save onboarding data:', error);
