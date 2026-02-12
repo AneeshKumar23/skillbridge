@@ -42,6 +42,32 @@ users_collection = db["users"]
 prompts_collection = db["user_prompts"]
 outputs_collection = db["user_outputs"]
 
+@app.on_event("startup")
+async def startup_db_client():
+    # Create devtest user if not exists
+    devtest_email = "devtest@skillbridge.com"
+    existing_user = await users_collection.find_one({"email": devtest_email})
+    
+    if not existing_user:
+        devtest_user = {
+            "id": uuid.uuid4().hex,
+            "email": devtest_email,
+            "password": "devtest123",  # In a real app, hash this!
+            "first_name": "Dev",
+            "last_name": "Test",
+            "language": "English",
+            "skills": ["Python", "FastAPI", "React"],
+            "street_address": "123 Dev Lane",
+            "city": "Test City",
+            "state": "TS",
+            "zip_code": "12345",
+            "country": "Devland"
+        }
+        await users_collection.insert_one(devtest_user)
+        print(f"✅ Devtest user created: {devtest_email} / devtest123")
+    else:
+        print(f"ℹ️ Devtest user already exists: {devtest_email}")
+
 # ---- Pydantic Models ----
 class SkillSuggestionRequest(BaseModel):
     prompt: str
@@ -257,4 +283,22 @@ async def suggest_skills(req: SkillSuggestionRequest):
 
     except Exception as e:
         print(f"❌ Error from Gemini: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class ChatRequest(BaseModel):
+    prompt: str
+
+@app.post("/api/chat")
+async def chat_endpoint(req: ChatRequest):
+    prompt = req.prompt.strip()
+    if not prompt:
+        raise HTTPException(status_code=400, detail="Prompt is required")
+
+    try:
+        model = genai.GenerativeModel(MODEL_NAME)
+        # Use a more conversational system prompt or just pass the prompt
+        response = model.generate_content(prompt)
+        return {"response": response.text}
+    except Exception as e:
+        print(f"❌ Error from Gemini Chat: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, CheckCircle, Circle, Target, BookOpen, Clock, Award } from 'lucide-react';
+import { ChevronDown, ChevronRight, CheckCircle, Circle, Target, BookOpen, Clock, Award, RefreshCw } from 'lucide-react';
 import { generateLearningPath } from '../../../api/db';
 
 interface LearningNode {
@@ -21,7 +21,7 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt }) => {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (prompt) {
+    if (prompt && nodes.length === 0) {
       loadPath(prompt);
     }
   }, [prompt]);
@@ -271,6 +271,15 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt }) => {
           <h3 className="font-semibold text-gray-900">Learning Path</h3>
         </div>
         <div className="flex items-center space-x-2">
+          <button 
+            onClick={() => prompt && loadPath(prompt)}
+            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            title="Regenerate Learning Path based on current chat"
+            disabled={loading}
+          >
+            <RefreshCw className={`w-4 h-4 text-gray-500 hover:text-blue-600 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <div className="h-4 w-px bg-gray-300 mx-1"></div>
           <Target className="w-4 h-4 text-blue-500" />
           <span className="text-sm text-gray-600">{completedCount}/{totalCount}</span>
         </div>

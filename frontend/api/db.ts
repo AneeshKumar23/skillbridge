@@ -205,8 +205,8 @@ export const addPrompt = async (userId: string, prompt: string) => {
 
 // --- AI / CHAT ---
 export const sendPromptToAI = async (userId: string, prompt: string) => {
-  // Use /api/suggest_skills as the closest valid AI endpoint for chat response
-  const response = await fetch(`${API_BASE_URL}/api/suggest_skills`, {
+  // Use dedicated chat endpoint
+  const response = await fetch(`${API_BASE_URL}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ prompt }),
@@ -217,12 +217,7 @@ export const sendPromptToAI = async (userId: string, prompt: string) => {
     throw new Error(errorData.detail || 'Failed to get AI response');
   }
 
-  const data = await response.json();
-  const aiResponse = data.skills && data.skills.length > 0
-    ? `Here are some suggested skills based on "${prompt}":\n\n- ${data.skills.join('\n- ')}`
-    : "I couldn't find specific skills for that topic, but I've updated your learning path!";
-
-  return { response: aiResponse };
+  return response.json();
 };
 
 export const suggestSkills = async (prompt: string) => {
