@@ -101,11 +101,109 @@ class SkillService:
 
     @staticmethod
     def save(user_id: str, skills: List[str]) -> dict:
-        """Persist the confirmed skill list on the user's profile."""
-        result = supabase.table("users").update({"skills": skills}).eq("id", user_id).execute()
-        if not result.data:
-            raise HTTPException(status_code=404, detail="User not found")
-        return {"msg": "Skills saved", "skills": skills}
+        """Insert a skills-snapshot row (full list) into user_skills, then sync users.skills."""
+        new_values = list(set(skills))  # deduplicate
+        
+        # Get latest language to include in the snapshot
+        latest = supabase.table("user_skills").select("language").eq("user_id", user_id).not_.is_("language", "null").order("created_at", desc=True).limit(1).execute()
+        lang = latest.data[0]["language"] if latest.data else None
+
+        supabase.table("user_skills").insert({
+            "user_id": user_id,
+            "skills": new_values,
+            "language": lang,
+            "status": "active",
+        }).execute()
+        # Keep users.skills in sync for backward compat
+        supabase.table("users").update({"skills": new_values}).eq("id", user_id).execute()
+        return {"msg": "Skills saved", "skills": new_values}
+
+    @staticmethod
+    def get_history(user_id: str) -> list:
+        """Return all skill-snapshot rows for the user, filtering out duplicates where skills didn't change."""
+        result = (
+            supabase.table("user_skills")
+            .select("id, skills, status, created_at")
+            .eq("user_id", user_id)
+            .not_.is_("skills", "null")
+            .order("created_at")
+            .execute()
+        )
+        rows = result.data or []
+        # Filter out rows where skills are identical to the previous row
+        filtered = []
+        prev_skills = None
+        for r in rows:
+            curr_skills = sorted(r["skills"]) if r.get("skills") else []
+            if curr_skills != prev_skills:
+                filtered.append(r)
+                prev_skills = curr_skills
+        return filtered
+
+    @staticmethod
+    def update_status(user_id: str, skill: str, status: str) -> dict:
+        """Update the status of the most recent snapshot row that contains the given skill."""
+        valid = {"active", "completed", "paused"}
+        if status not in valid:
+            raise HTTPException(status_code=400, detail=f"status must be one of {valid}")
+        # Find the latest snapshot containing this skill
+        rows = (
+            supabase.table("user_skills")
+            .select("id, skills")
+            .eq("user_id", user_id)
+            .not_.is_("skills", "null")
+            .order("created_at", desc=True)
+            .execute()
+        ).data or []
+        target_id = next(
+            (r["id"] for r in rows if r.get("skills") and skill in r["skills"]), None
+        )
+        if target_id is None:
+            raise HTTPException(status_code=404, detail=f"Skill '{skill}' not found")
+        supabase.table("user_skills").update({"status": status}).eq("id", target_id).execute()
+        return {"msg": "Status updated", "skill": skill, "status": status}
+
+
+# ── Language ──────────────────────────────────────────────────────────────────
+
+class LanguageService:
+    @staticmethod
+    def save(user_id: str, language: str) -> dict:
+        """Append a language-change row to user_skills and sync users.language."""
+        # Get latest skills to include in the snapshot
+        latest = supabase.table("user_skills").select("skills").eq("user_id", user_id).not_.is_("skills", "null").order("created_at", desc=True).limit(1).execute()
+        skills = latest.data[0]["skills"] if latest.data else []
+
+        supabase.table("user_skills").insert({
+            "user_id": user_id,
+            "skills": skills,
+            "language": language,
+            "status": "active",
+        }).execute()
+        supabase.table("users").update({"language": language}).eq("id", user_id).execute()
+        return {"msg": "Language saved", "language": language}
+
+    @staticmethod
+    def get_history(user_id: str) -> list:
+        """Return all language-change rows for the user, filtering out duplicates."""
+        result = (
+            supabase.table("user_skills")
+            .select("id, language, created_at")
+            .eq("user_id", user_id)
+            .not_.is_("language", "null")
+            .order("created_at")
+            .execute()
+        )
+        rows = result.data or []
+        # Filter out rows where language is identical to the previous row
+        filtered = []
+        prev_lang = None
+        for r in rows:
+            curr_lang = r.get("language")
+            if curr_lang != prev_lang:
+                filtered.append(r)
+                prev_lang = curr_lang
+        return filtered
 
 
 # ── Roadmap ───────────────────────────────────────────────────────────────────
@@ -266,6 +364,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 @app.put("/users/{user_id}/onboarding", summary="Save location, language")
 def update_onboarding(user_id: str, data: OnboardingUpdate):
+    # Update location fields on users table
     result = supabase.table("users").update({
         "language": data.language,
         "skills": data.skills,
@@ -278,6 +377,13 @@ def update_onboarding(user_id: str, data: OnboardingUpdate):
 
     if not result.data:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Also write to history tables
+    if data.language:
+        LanguageService.save(user_id, data.language)
+    if data.skills:
+        SkillService.save(user_id, data.skills)
+
     return {"msg": "Onboarding saved"}
 
 
@@ -291,9 +397,21 @@ def suggest_skills(user_id: str, req: SkillSuggestRequest):
 
 
 @app.put("/users/{user_id}/skills",
-         summary="Save confirmed skills to user profile")
+         summary="Save confirmed skills to user_skills table")
 def save_skills(user_id: str, req: SkillsSaveRequest):
     return SkillService.save(user_id, req.skills)
+
+
+@app.get("/users/{user_id}/skills",
+         summary="Get skill history with status and timestamps")
+def get_skill_history(user_id: str):
+    return SkillService.get_history(user_id)
+
+
+@app.patch("/users/{user_id}/skills/{skill}",
+           summary="Update status of a skill (active | completed | paused)")
+def update_skill_status(user_id: str, skill: str, req: SkillStatusUpdate):
+    return SkillService.update_status(user_id, skill, req.status)
 
 
 # ── Roadmap ───────────────────────────────────────────────────────────────────
@@ -354,6 +472,14 @@ def get_articles(user_id: str, req: ResourceRequest):
          summary="Get saved resources (?type=youtube|article|certificate)")
 def get_resources(user_id: str, type: Optional[str] = None):
     return ResourceService.get(user_id, type)
+
+
+# ── Languages ─────────────────────────────────────────────────────────────────
+
+@app.get("/users/{user_id}/languages",
+         summary="Get language history with timestamps")
+def get_language_history(user_id: str):
+    return LanguageService.get_history(user_id)
 
 
 # ── Certificate ───────────────────────────────────────────────────────────────

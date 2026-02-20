@@ -49,6 +49,14 @@ export interface Roadmap {
   created_at: string;
 }
 
+export interface ProfileItem {
+  id: number;
+  skills: string[] | null;        // skill snapshot array (null for language rows)
+  language: string | null;        // language name (null for skill rows)
+  status: 'active' | 'completed' | 'paused' | null;  // null for language rows
+  created_at: string;
+}
+
 // ── Session helpers ────────────────────────────────────────────────────────────
 
 export const getStoredToken = (): string | null => localStorage.getItem('accessToken');
@@ -239,5 +247,62 @@ export const generateCertificate = async (userId: string) => {
     headers: authHeaders(),
   });
   return handleResponse<{ msg: string; url: string }>(res);
+};
+
+
+// ── Skill history ─────────────────────────────────────────────────────────────────
+
+/** GET /users/{id}/skills — all skill rows from user_profile_items */
+export const getSkillHistory = async (userId: string) => {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/skills`, {
+    headers: authHeaders(),
+  });
+  // backend returns {id, skills: string[], status, created_at}
+  const data = await handleResponse<Array<{ id: number; skills: string[]; status: string; created_at: string }>>(res);
+  return data.map(r => ({ ...r, language: null })) as ProfileItem[];
+};
+
+/** PATCH /users/{id}/skills/{skill} — update status: active | completed | paused */
+export const updateSkillStatus = async (
+  userId: string,
+  skill: string,
+  status: 'active' | 'completed' | 'paused',
+) => {
+  const res = await fetch(
+    `${API_BASE_URL}/users/${userId}/skills/${encodeURIComponent(skill)}`,
+    {
+      method: 'PATCH',
+      headers: jsonHeaders(),
+      body: JSON.stringify({ status }),
+    },
+  );
+  return handleResponse<{ msg: string; skill: string; status: string }>(res);
+};
+
+
+// ── Language history ──────────────────────────────────────────────────────────────
+
+/** GET /users/{id}/languages — all language rows from user_skills */
+export const getLanguageHistory = async (userId: string) => {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/languages`, {
+    headers: authHeaders(),
+  });
+  // backend returns {id, language, created_at}
+  const data = await handleResponse<Array<{ id: number; language: string; created_at: string }>>(res);
+  return data.map(r => ({ ...r, skills: null, status: null })) as ProfileItem[];
+};
+
+
+// ── All profile items ────────────────────────────────────────────────────────────────
+
+/** Fetch both skills and languages together, sorted by created_at */
+export const getProfileItems = async (userId: string): Promise<ProfileItem[]> => {
+  const [skills, languages] = await Promise.all([
+    getSkillHistory(userId),
+    getLanguageHistory(userId),
+  ]);
+  return [...skills, ...languages].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
 };
 

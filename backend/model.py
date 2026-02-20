@@ -45,6 +45,10 @@ class SkillsSaveRequest(BaseModel):
     """Body for PUT /users/{id}/skills — confirmed skill list from frontend."""
     skills: List[str]
 
+class SkillStatusUpdate(BaseModel):
+    """Body for PATCH /users/{id}/skills/{skill} — update a skill's status."""
+    status: str  # 'active' | 'completed' | 'paused'
+
 
 # ── Roadmap ───────────────────────────────────────────────────────────────────
 

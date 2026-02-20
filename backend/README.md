@@ -69,9 +69,18 @@ pip install -r requirements.txt
 # Run database migrations
 .\venv\Scripts\alembic upgrade head
 
-# Start the server
+# Start the server (option A — venv activated)
 python -m uvicorn app:app --reload --host 0.0.0.0 --port 8000
+
+# Start the server (option B — no activation needed, full path)
+.\venv\Scripts\python.exe -m uvicorn app:app --reload --host 0.0.0.0 --port 8000
 ```
+
+> **Port conflict?** If port 8000 is already taken, run:
+> ```powershell
+> $p = netstat -ano | Select-String ':8000\s' | Select-String 'LISTENING'
+> if ($p) { Stop-Process -Id ($p.ToString().Trim() -split '\s+')[-1] -Force }
+> ```
 
 Swagger UI → [http://localhost:8000/docs](http://localhost:8000/docs)
 
@@ -119,14 +128,17 @@ The API is organised around the user journey: **Auth → Onboarding → Skills �
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `PUT` | `/users/{id}/onboarding` | Save language, location |
+| `PUT` | `/users/{id}/onboarding` | Save language → `user_languages`, skills → `user_skills`, location → `users` |
+| `GET` | `/users/{id}/languages` | Get language history — `[{language, created_at}]` |
 
 ### Skills
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `POST` | `/users/{id}/skills/suggest` | Body `{interest}` → AI suggests skills *(not saved yet)* |
-| `PUT` | `/users/{id}/skills` | Body `{skills}` → persist confirmed skills to user profile |
+| `PUT` | `/users/{id}/skills` | Body `{skills}` → upsert confirmed skills to `user_skills` table |
+| `GET` | `/users/{id}/skills` | Get skill history — `[{skill, status, created_at}]` |
+| `PATCH` | `/users/{id}/skills/{skill}` | Body `{status}` → update skill status (`active` \| `completed` \| `paused`) |
 
 ### Roadmap
 
@@ -162,19 +174,22 @@ The API is organised around the user journey: **Auth → Onboarding → Skills �
 ## User Journey + DB Writes
 
 ```
-1. Signup        POST /users/                      → users table
-2. Login         POST /login                       → JWT issued
-3. Onboarding    PUT  /users/{id}/onboarding       → users table (language, location)
-4. Skills        POST /users/{id}/skills/suggest   → AI only, no write
-                 PUT  /users/{id}/skills           → users.skills column
-5. Roadmap       POST /users/{id}/roadmap          → user_roadmaps (JSONB)
-                 GET  /users/{id}/roadmap[/{skill}]→ read from user_roadmaps
-6. Chat          POST /users/{id}/chat             → user_chat_messages ×2 (user + assistant)
-                 GET  /users/{id}/chat             → full history
-7. Resources     POST /users/{id}/resources/youtube   → user_resources (type=youtube)
-                 POST /users/{id}/resources/articles  → user_resources (type=article)
-                 GET  /users/{id}/resources           → filtered by ?type=
-8. Certificate   POST /certificate/{id}            → Supabase Storage + user_resources (type=certificate)
+1. Signup        POST /users/                           → users table
+2. Login         POST /login                            → JWT issued
+3. Onboarding    PUT  /users/{id}/onboarding            → users + user_languages + user_skills
+                 GET  /users/{id}/languages             → read from user_languages
+4. Skills        POST /users/{id}/skills/suggest        → AI only, no write
+                 PUT  /users/{id}/skills                → user_skills (upsert)
+                 GET  /users/{id}/skills                → skill history [{skill, status, created_at}]
+                 PATCH /users/{id}/skills/{skill}       → update status in user_skills
+5. Roadmap       POST /users/{id}/roadmap               → user_roadmaps (JSONB)
+                 GET  /users/{id}/roadmap[/{skill}]     → read from user_roadmaps
+6. Chat          POST /users/{id}/chat                  → user_chat_messages ×2 (user + assistant)
+                 GET  /users/{id}/chat                  → full history
+7. Resources     POST /users/{id}/resources/youtube     → user_resources (type=youtube)
+                 POST /users/{id}/resources/articles    → user_resources (type=article)
+                 GET  /users/{id}/resources             → filtered by ?type=
+8. Certificate   POST /certificate/{id}                 → Supabase Storage + user_resources (type=certificate)
 ```
 
 The frontend stores `userId` and `accessToken` in `localStorage` and sends  
@@ -195,8 +210,10 @@ backend/
 ├── migrations/
 │   ├── env.py
 │   └── versions/
-│       ├── 0001_initial.py          # users, user_prompts, user_outputs
-│       └── 0002_modular_tables.py   # user_chat_messages, user_roadmaps, user_resources
+│       ├── 0001_initial.py              # users, user_prompts, user_outputs
+│       ├── 0002_modular_tables.py       # user_chat_messages, user_roadmaps, user_resources
+│       ├── 0003_fix_grants.py           # RLS + grants for modular tables
+│       └── 0004_skills_language_tables.py  # user_skills, user_languages (with data migration)
 ├── requirements.txt
 ├── backend.dockerfile
 ├── docker-compose.yml
@@ -207,7 +224,8 @@ backend/
 
 | Table | Purpose |
 |-------|---------|
-| `users` | Profile + onboarding data + skills array |
+| `users` | Profile + location + skills/language (kept in sync) |
+| `user_profile_items` | Unified skill + language history — `type` (`skill`/`language`), `value`, `status` |
 | `user_chat_messages` | Full chat history — `role` (`user`/`assistant`) + `content` |
 | `user_roadmaps` | Gemini-generated learning path per skill — `skill` + `roadmap` (JSONB) |
 | `user_resources` | YouTube videos, articles, certificates — `type` + `topic` + `data` (JSONB) |
