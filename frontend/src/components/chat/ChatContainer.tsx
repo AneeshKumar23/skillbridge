@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChatInput } from '../chat/ChatInput';
-import { getPrompts, addPrompt, sendPromptToAI } from '../../../api/db'; // Adjust path if needed
+import { getChatHistory, sendMessage } from '../../../api/db';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -22,14 +22,14 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ userId, onPromptCh
   const [messages, setMessages] = useState<Message[]>([]);
 
   useEffect(() => {
-    const loadPrompts = async () => {
+    const loadHistory = async () => {
       try {
-        const data = await getPrompts(userId);
-        const loadedMessages: Message[] = (data.prompts || []).map((prompt: string, index: number) => ({
-          id: `u-${index}`,
-          content: prompt,
-          isUser: true,
-          timestamp: new Date(),
+        const history = await getChatHistory(userId);
+        const loadedMessages: Message[] = (history || []).map((msg: { id: string; role: string; content: string; created_at: string }) => ({
+          id: msg.id,
+          content: msg.content,
+          isUser: msg.role === 'user',
+          timestamp: new Date(msg.created_at),
         }));
 
         setMessages([
@@ -41,17 +41,18 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ userId, onPromptCh
           },
           ...loadedMessages,
         ]);
-        
+
         // Restore last prompt context
-        if (data.prompts && data.prompts.length > 0 && onPromptChange) {
-            onPromptChange(data.prompts[data.prompts.length - 1]);
+        const lastUserMsg = [...loadedMessages].reverse().find(m => m.isUser);
+        if (lastUserMsg && onPromptChange) {
+          onPromptChange(lastUserMsg.content);
         }
       } catch (err) {
-        console.error('Failed to load prompts:', err);
+        console.error('Failed to load chat history:', err);
       }
     };
 
-    loadPrompts();
+    loadHistory();
   }, []);
 
   const handleSendMessage = async (message: string) => {
@@ -69,9 +70,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ userId, onPromptCh
     setMessages((prev) => [...prev, userMessage]);
 
     try {
-      await addPrompt(userId, message);
-
-      const aiResult = await sendPromptToAI(userId, message);
+      const aiResult = await sendMessage(userId, message);
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),

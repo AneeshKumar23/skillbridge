@@ -9,6 +9,7 @@ import {
   Play,
   X,
 } from 'lucide-react';
+import { getArticleResources, getYouTubeResources, getStoredUserId } from '../../../api/db';
 
 interface Reference {
   id: string;
@@ -23,9 +24,10 @@ interface ReferenceProps {
   isExpanded: boolean;
   onToggle: () => void;
   prompt: string;
+  userId?: string;
 }
 
-export const Reference: React.FC<ReferenceProps> = ({ isExpanded, onToggle, prompt }) => {
+export const Reference: React.FC<ReferenceProps> = ({ isExpanded, onToggle, prompt, userId }) => {
   const [references, setReferences] = useState<Reference[]>([]);
   const [activeEmbed, setActiveEmbed] = useState<string | null>(null);
 
@@ -33,53 +35,44 @@ export const Reference: React.FC<ReferenceProps> = ({ isExpanded, onToggle, prom
     const fetchResources = async () => {
       if (!prompt) return;
 
+      const uid = userId || getStoredUserId() || '';
       const newRefs: Reference[] = [];
 
       try {
-        const wikiRes = await fetch(`http://localhost:8000/api/generate_article?prompt=${encodeURIComponent(prompt)}`, { method: 'POST' });
-        if (wikiRes.ok) {
-           const wikiData = await wikiRes.json();
-           if (wikiData.articles && Array.isArray(wikiData.articles)) {
-             wikiData.articles.forEach((article: any, index: number) => {
-               newRefs.push({
-                 id: `article-${index}`,
-                 title: article.title,
-                 type: 'document',
-                 url: article.link,
-                 description: `Read more about ${prompt} on ${new URL(article.link).hostname}`,
-               });
-             });
-           }
-        } else {
-             console.error("Wiki/Article fetch failed", wikiRes.status);
+        const artData = await getArticleResources(uid, prompt);
+        if (artData.articles && Array.isArray(artData.articles)) {
+          artData.articles.forEach((article: any, index: number) => {
+            newRefs.push({
+              id: `article-${index}`,
+              title: article.title,
+              type: 'document',
+              url: article.link,
+              description: `Read more about ${prompt} on ${new URL(article.link).hostname}`,
+            });
+          });
         }
-      } catch (e) { console.error("Wiki fetch error", e); }
+      } catch (e) { console.error('Article fetch error', e); }
 
       try {
-        const youtubeRes = await fetch(`http://localhost:8000/api/generate_youtube_content?prompt=${encodeURIComponent(prompt)}`, { method: 'POST' });
-        if (youtubeRes.ok) {
-           const youtubeData = await youtubeRes.json();
-           if (youtubeData.materials && Array.isArray(youtubeData.materials)) {
-               youtubeData.materials.forEach((video: any, index: number) => {
-                   newRefs.push({
-                       id: `video-${index}`,
-                       title: video.title,
-                       type: 'video',
-                       url: video.link,
-                       description: youtubeData.description || video.title,
-                   });
-               });
-           }
-        } else {
-             console.error("Youtube fetch failed", youtubeRes.status);
+        const ytData = await getYouTubeResources(uid, prompt);
+        if (ytData.materials && Array.isArray(ytData.materials)) {
+          ytData.materials.forEach((video: any, index: number) => {
+            newRefs.push({
+              id: `video-${index}`,
+              title: video.title,
+              type: 'video',
+              url: video.link,
+              description: ytData.description || video.title,
+            });
+          });
         }
-      } catch (e) { console.error("Youtube fetch error", e); }
+      } catch (e) { console.error('YouTube fetch error', e); }
 
       setReferences(newRefs);
     };
 
     fetchResources();
-  }, [prompt]);
+  }, [prompt, userId]);
 
   const getIcon = (type: string) => {
     switch (type) {

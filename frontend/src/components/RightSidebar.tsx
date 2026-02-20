@@ -5,9 +5,10 @@ import { LearningPath } from './chat/LearningPath';
 
 interface RightSidebarProps {
   currentPrompt?: string;
+  userId?: string;
 }
 
-export const RightSidebar: React.FC<RightSidebarProps> = ({ currentPrompt }) => {
+export const RightSidebar: React.FC<RightSidebarProps> = ({ currentPrompt, userId }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<'references' | 'learning'>('learning');
 
@@ -79,10 +80,11 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ currentPrompt }) => 
                   isExpanded={isExpanded}
                   onToggle={toggleExpanded}
                   prompt={currentPrompt || ''}
+                  userId={userId}
                 />
              </div>
              <div className={`absolute inset-0 ${activeTab === 'learning' ? 'block' : 'hidden'}`}>
-                 <LearningPath prompt={currentPrompt} />
+                 <LearningPath prompt={currentPrompt} userId={userId} />
              </div>
           </div>
         </div>

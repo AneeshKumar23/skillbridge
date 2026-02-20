@@ -94,7 +94,7 @@ export const Chat: React.FC = () => {
         </div>
 
         {/* Right Sidebar */}
-        <RightSidebar currentPrompt={currentPrompt} />
+        <RightSidebar currentPrompt={currentPrompt} userId={user.id} />
       </div>
     </div>
   );

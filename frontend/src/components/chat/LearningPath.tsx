@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, CheckCircle, Circle, Target, BookOpen, Clock, Award, RefreshCw } from 'lucide-react';
-import { generateLearningPath } from '../../../api/db';
+import { generateRoadmap, getRoadmapBySkill, getStoredUserId } from '../../../api/db';
 
 interface LearningNode {
   id: string;
@@ -13,9 +13,10 @@ interface LearningNode {
 
 interface LearningPathProps {
   prompt?: string;
+  userId?: string;
 }
 
-export const LearningPath: React.FC<LearningPathProps> = ({ prompt }) => {
+export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) => {
   const [nodes, setNodes] = useState<LearningNode[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
@@ -28,8 +29,16 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt }) => {
 
   const loadPath = async (searchPrompt: string) => {
     setLoading(true);
+    const uid = userId || getStoredUserId() || '';
     try {
-      const data = await generateLearningPath(searchPrompt);
+      let data: any;
+      try {
+        const cached = await getRoadmapBySkill(uid, searchPrompt);
+        data = cached.roadmap;
+      } catch {
+        const fresh = await generateRoadmap(uid, searchPrompt);
+        data = fresh.roadmap;
+      }
       if (data && data.milestones) {
         const newNodes: LearningNode[] = data.milestones.map((m: any, i: number) => ({
           id: `${i}`,
@@ -43,13 +52,12 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt }) => {
           }))
         }));
         setNodes(newNodes);
-        // Expand first node by default
         if (newNodes.length > 0) {
-            setExpandedNodes(new Set([newNodes[0].id]));
+          setExpandedNodes(new Set([newNodes[0].id]));
         }
       }
     } catch (error) {
-      console.error("Failed to load learning path", error);
+      console.error('Failed to load learning path', error);
     } finally {
       setLoading(false);
     }
