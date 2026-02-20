@@ -1,23 +1,11 @@
 services:
-  mongodb:
-    image: mongo:latest
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-
   backend:
     build:
       context: .
       dockerfile: backend.dockerfile
     ports:
       - "8000:8000"
-    depends_on:
-      - mongodb
-    environment:
-      - MONGO_URL=mongodb://mongodb:27017
     env_file:
       - ./.env
-
-volumes:
-  mongodb_data:
+    # env vars are loaded from .env — see README for required keys:
+    # SUPABASE_URL, SUPABASE_SERVICE_KEY, MODEL_API_KEY, MODEL_NAME

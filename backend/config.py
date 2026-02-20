@@ -6,6 +6,10 @@ load_dotenv()
 MODEL_API_KEY = os.getenv("MODEL_API_KEY")
 MODEL_NAME = os.getenv("MODEL_NAME")
 
+# Supabase
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")  # service_role key (bypasses RLS)
+
 BASE_PROMPT = """
     {{
         "title": "<title>",

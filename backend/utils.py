@@ -30,21 +30,21 @@ def search_youtube(query, max_results=5):
         })
     return videos
 
-def generate_certificate(name: str) -> str:
-    img = Image.open("assets/image.png")  
+def generate_certificate(name: str) -> tuple:
+    """Generate a certificate PNG and return (filename, raw_bytes) for upload."""
+    import io
+    img = Image.open("assets/image.png")
     d = ImageDraw.Draw(img)
-    location = (600, 550)  
-    text_color = (18, 48, 134)  
-    font = ImageFont.truetype(
-        "assets/aerial.ttf", 75
-    )
+    location = (600, 550)
+    text_color = (18, 48, 134)
+    font = ImageFont.truetype("assets/aerial.ttf", 75)
     d.text(location, name, fill=text_color, font=font)
-    if not os.path.exists("generated"):
-        os.makedirs("generated")
-    #name should replaced by hash from dev
-    file_name = "generated/" + name + ".png"
-    img.save(file_name)
-    return file_name
+
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    file_bytes = buffer.getvalue()
+    file_name = f"{name}.png"
+    return file_name, file_bytes
 
 def generate_youtube_content(query):
     # Step 1: Get YouTube videos
