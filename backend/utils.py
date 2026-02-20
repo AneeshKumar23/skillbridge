@@ -6,10 +6,13 @@ import json
 from PIL import Image, ImageDraw, ImageFont
 import random
 
-load_dotenv()
+_HERE = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(_HERE, ".env"))
 
-genai.configure(api_key=os.getenv("MODEL_API_KEY"))
-model = genai.GenerativeModel(model_name=os.getenv("MODEL_NAME", "gemma-3-27b-it"))
+
+def _get_model():
+    """Return a GenerativeModel using the already-configured genai state."""
+    return genai.GenerativeModel(model_name=os.getenv("MODEL_NAME", "gemma-3-27b-it"))
 
 def search_youtube(query, max_results=5):
     YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
@@ -51,6 +54,7 @@ def generate_youtube_content(query):
     video_links = search_youtube(query, max_results=5)
 
     # Step 2: Ask Gemini to generate the title/description
+    model = _get_model()
     prompt = f"""
 You are helping a user learn a new skill: "{query}".
 Below are the YouTube video links.
@@ -114,16 +118,24 @@ grab all the contents from internet and give the article links with title in the
     Do not include any additional text or explanations. No youtube links only the website links. Generate 5 article links with their titles.
 """
 
+    model = _get_model()
     response = model.generate_content(
         contents=base_prompt + prompt,
     )
 
-    text = response.text
-    data = json.loads(text[7:-3])
-    try:
-        data = json.loads(text[7:-3])
-    except json.JSONDecodeError:
-        text = text.strip("```json").strip("```")
+    text = response.text.strip()
+    # Strip optional ```json ... ``` fence
+    if text.startswith("```"):
+        text = text.split("\n", 1)[-1]  # drop opening fence line
+    if text.endswith("```"):
+        text = text.rsplit("```", 1)[0]
+    text = text.strip()
+
+    # The prompt asks for { [...] } — unwrap outer braces if needed
+    if text.startswith("{") and not text.startswith("["):
+        inner = text[text.index("["):text.rindex("]") + 1]
+        data = json.loads(inner)
+    else:
         data = json.loads(text)
 
     return data

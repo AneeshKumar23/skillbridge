@@ -1,7 +1,9 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+# Use abspath(__file__) so this works regardless of CWD or how the module is imported
+_HERE = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(_HERE, ".env"))
 
 MODEL_API_KEY = os.getenv("MODEL_API_KEY")
 MODEL_NAME = os.getenv("MODEL_NAME")

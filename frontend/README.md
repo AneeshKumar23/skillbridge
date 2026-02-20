@@ -1,73 +1,87 @@
-# Welcome to your Lovable project
+# SkillBridge — Frontend
 
-## Project info
+> React + TypeScript + Vite single-page application
 
-**URL**: https://lovable.dev/projects/f32fb413-a51d-4c53-954c-a8f7c0997bb1
+---
 
-## How can I edit this code?
+## Stack
 
-There are several ways of editing your application.
+| Layer | Technology |
+|-------|-----------|
+| Framework | React 18 + TypeScript |
+| Build tool | Vite |
+| Styling | Tailwind CSS + shadcn/ui |
+| Data fetching | TanStack Query (React Query) |
+| Routing | React Router DOM |
+| Package manager | Bun (lockfile) / npm compatible |
 
-**Use Lovable**
+---
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/f32fb413-a51d-4c53-954c-a8f7c0997bb1) and start prompting.
+## Prerequisites
 
-Changes made via Lovable will be committed automatically to this repo.
+- Node.js 18+
+- npm, yarn, or bun
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Local Setup
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```bash
+cd frontend
 
-Follow these steps:
+# Install dependencies
+npm install
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server (port 8080)
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+App → [http://localhost:8080](http://localhost:8080)  
+Backend must be running on [http://localhost:8000](http://localhost:8000) — see `../backend/README.md`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+---
 
-**Use GitHub Codespaces**
+## Project Structure
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```
+frontend/
+├── src/
+│   ├── pages/
+│   │   ├── Index.tsx          # Landing page
+│   │   ├── Login.tsx          # Login form
+│   │   ├── Signup.tsx         # Signup form
+│   │   ├── Onboarding.tsx     # Language / location / skills slides
+│   │   ├── Chat.tsx           # AI chat + learning path
+│   │   └── Certificates.tsx   # User certificates
+│   ├── components/
+│   │   ├── chat/              # ChatContainer, ChatInput, LearningPath, Reference
+│   │   ├── landing/           # About, Features, Courses, Contact
+│   │   ├── onboarding/        # LanguageSlide, LocationSlide, SkillSlide, LoadingSlide
+│   │   └── ui/                # shadcn/ui components
+│   ├── context/
+│   │   └── UserContext.tsx    # Global user state + loginUser / logoutUser
+│   └── hooks/
+│       └── use-mobile.tsx
+├── api/
+│   ├── db.ts                  # All FastAPI calls + JWT session helpers
+│   └── stt.ts                 # Speech-to-text (ElevenLabs)
+└── public/
+```
 
-## What technologies are used for this project?
+---
 
-This project is built with:
+## Auth
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- Login / signup calls hit the FastAPI backend at `/login` and `/users/`.
+- On success the JWT `access_token` and `userId` are stored in `localStorage` via helpers in `api/db.ts` (`storeSession`, `clearSession`).
+- Protected requests include `Authorization: Bearer <token>`.
 
-## How can I deploy this project?
+---
 
-Simply open [Lovable](https://lovable.dev/projects/f32fb413-a51d-4c53-954c-a8f7c0997bb1) and click on Share -> Publish.
+## Build
 
-## Can I connect a custom domain to my Lovable project?
+```bash
+npm run build   # outputs to dist/
+npm run preview # preview the production build locally
+```
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)

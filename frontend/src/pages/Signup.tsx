@@ -51,7 +51,7 @@ const Signup = () => {
       console.log('Signup successful:', response);
 
       if (response.id) {
-        await loginUser(response.id);
+        await loginUser(response.id, response.access_token ?? undefined);
         navigate('/onboarding');
       } else {
         console.warn("No user ID returned in response.");

@@ -25,6 +25,27 @@ interface OnboardingData {
   country: string;
 }
 
+// ── Session helpers ────────────────────────────────────────────
+// JWT + userId are stored in localStorage after login/signup.
+
+export const getStoredToken = (): string | null => localStorage.getItem('accessToken');
+export const getStoredUserId = (): string | null => localStorage.getItem('userId');
+
+export const storeSession = (userId: string, accessToken: string) => {
+  localStorage.setItem('userId', userId);
+  localStorage.setItem('accessToken', accessToken);
+};
+
+export const clearSession = () => {
+  localStorage.removeItem('userId');
+  localStorage.removeItem('accessToken');
+};
+
+const authHeaders = (): Record<string, string> => {
+  const token = getStoredToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 // --- SIGNUP ---
 export const signup = async (data: SignupData) => {
   const response = await fetch(`${API_BASE_URL}/users/`, {
@@ -76,7 +97,14 @@ export const login = async (data: LoginData) => {
     throw new Error(errorData.detail || 'Login failed');
   }
 
-  return response.json();
+  const result = await response.json();
+
+  // Persist JWT + userId for the session
+  if (result.user_id && result.access_token) {
+    storeSession(result.user_id, result.access_token);
+  }
+
+  return result;
 };
 
 // --- ONBOARDING UPDATE ---
@@ -165,6 +193,9 @@ export const markSubtopicComplete = async (
 export const getUser = async (userId: string) => {
   const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
     method: 'GET',
+    headers: {
+      ...authHeaders(),
+    },
   });
 
   if (!response.ok) {

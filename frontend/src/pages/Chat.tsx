@@ -77,7 +77,7 @@ export const Chat: React.FC = () => {
       <Header onMenuToggle={toggleSidebar} user={user} />
 
       {/* Main Content */}
-      <div className="flex-1 flex relative">
+      <div className="flex-1 flex relative overflow-hidden">
         {/* Left Sidebar */}
         <Sidebar
           isOpen={isSidebarOpen}

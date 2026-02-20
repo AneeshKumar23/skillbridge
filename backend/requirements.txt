@@ -4,6 +4,8 @@ cachetools==5.5.2
 certifi==2025.7.9
 charset-normalizer==3.4.2
 click==8.2.1
+alembic>=1.13.0
+asyncpg>=0.29.0
 fastapi==0.116.1
 google-ai-generativelanguage==0.6.15
 google-api-core==2.25.1

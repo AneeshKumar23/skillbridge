@@ -23,7 +23,7 @@ const Login = () => {
 
       // Update global user state
       if (response.user_id) {
-        await loginUser(response.user_id);
+        await loginUser(response.user_id, response.access_token);
         navigate('/chat');
       } else {
         throw new Error("User ID missing in response");

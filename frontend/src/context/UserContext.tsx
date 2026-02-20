@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getUser } from '../../api/db';
+import { getUser, storeSession, clearSession, getStoredToken, getStoredUserId } from '../../api/db';
 
 interface User {
     id: string;
@@ -11,7 +11,7 @@ interface User {
 
 interface UserContextType {
     user: User | null;
-    loginUser: (userId: string) => Promise<void>;
+    loginUser: (userId: string, accessToken?: string) => Promise<void>;
     logoutUser: () => void;
     isLoading: boolean;
 }
@@ -23,7 +23,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const storedUserId = localStorage.getItem('userId');
+        const storedUserId = getStoredUserId();
         if (storedUserId) {
             fetchUser(storedUserId);
         } else {
@@ -37,20 +37,23 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(userData);
         } catch (error) {
             console.error('Failed to restore user session:', error);
-            localStorage.removeItem('userId');
+            clearSession();
         } finally {
             setIsLoading(false);
         }
     };
 
-    const loginUser = async (userId: string) => {
+    const loginUser = async (userId: string, accessToken?: string) => {
         setIsLoading(true);
-        localStorage.setItem('userId', userId);
+        // If a fresh token was supplied (login/signup), persist it
+        if (accessToken) {
+            storeSession(userId, accessToken);
+        }
         await fetchUser(userId);
     };
 
     const logoutUser = () => {
-        localStorage.removeItem('userId');
+        clearSession();
         setUser(null);
     };
 
