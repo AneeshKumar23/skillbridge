@@ -99,6 +99,7 @@ export const Chat: React.FC = () => {
           onClose={closeMobileSidebar}
           onToggleCollapse={toggleCollapse}
           onNavigate={handleNavigation}
+          onSkillSelect={setCurrentPrompt}
           userId={user.id}
           user={user}
         />

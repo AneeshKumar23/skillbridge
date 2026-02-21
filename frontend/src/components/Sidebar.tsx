@@ -9,6 +9,7 @@ interface SidebarProps {
   onClose: () => void;
   onToggleCollapse: () => void;
   onNavigate: (page: string) => void;
+  onSkillSelect?: (skill: string) => void;  // fires when user clicks a skill
   userId: string;
   user: {
     first_name: string;
@@ -43,6 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onClose,
   onToggleCollapse,
   onNavigate,
+  onSkillSelect,
   userId,
   user,
 }) => {
@@ -277,8 +279,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   className="group flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   <StatusIcon status={status} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{skill}</p>
+                  <div
+                    className="flex-1 min-w-0 cursor-pointer"
+                    onClick={() => onSkillSelect?.(skill)}
+                    title={`Load roadmap for "${skill}"`}
+                  >
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{skill}</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500">{formatDate(created_at)}</p>
                   </div>
                   <button

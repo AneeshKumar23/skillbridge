@@ -22,10 +22,12 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (prompt && nodes.length === 0) {
+    if (prompt) {
+      setNodes([]);  // clear old nodes so the new skill loads fresh
       loadPath(prompt);
     }
   }, [prompt]);
+
 
   const loadPath = async (searchPrompt: string) => {
     setLoading(true);
@@ -95,14 +97,13 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
         {level === 0 && !isLast && (
           <div className="absolute left-6 top-12 w-0.5 h-full bg-gray-200"></div>
         )}
-        
+
         {/* Node Container */}
         <div className="flex items-start space-x-4 mb-6">
           {/* Timeline Dot */}
           <div className="relative flex-shrink-0">
-            <div className={`w-12 h-12 rounded-full border-4 border-white shadow-lg flex items-center justify-center ${
-              node.completed ? 'bg-green-500' : node.progress ? 'bg-blue-500' : 'bg-gray-300'
-            }`}>
+            <div className={`w-12 h-12 rounded-full border-4 border-white shadow-lg flex items-center justify-center ${node.completed ? 'bg-green-500' : node.progress ? 'bg-blue-500' : 'bg-gray-300'
+              }`}>
               {node.completed ? (
                 <CheckCircle className="w-6 h-6 text-white" />
               ) : node.progress ? (
@@ -111,7 +112,7 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
                 <Circle className="w-6 h-6 text-white" />
               )}
             </div>
-            
+
             {/* Progress Ring */}
             {node.progress !== undefined && !node.completed && (
               <svg className="absolute inset-0 w-12 h-12 transform -rotate-90">
@@ -142,9 +143,8 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
           {/* Content */}
           <div className="flex-1 min-w-0">
             <div
-              className={`bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-200 ${
-                hasChildren ? 'cursor-pointer' : ''
-              }`}
+              className={`bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-200 ${hasChildren ? 'cursor-pointer' : ''
+                }`}
               onClick={() => hasChildren && toggleNode(node.id)}
             >
               <div className="flex items-start justify-between">
@@ -159,16 +159,15 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
                         )}
                       </button>
                     )}
-                    <h4 className={`font-semibold ${
-                      node.completed ? 'text-green-700' : 'text-gray-900'
-                    }`}>
+                    <h4 className={`font-semibold ${node.completed ? 'text-green-700' : 'text-gray-900'
+                      }`}>
                       {node.title}
                     </h4>
                     {node.completed && (
                       <Award className="w-4 h-4 text-yellow-500" />
                     )}
                   </div>
-                  
+
                   <div className="flex items-center space-x-4 text-sm text-gray-500">
                     {node.duration && (
                       <div className="flex items-center space-x-1">
@@ -203,23 +202,21 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
                     {index < node.children!.length - 1 && (
                       <div className="absolute left-6 top-8 w-0.5 h-full bg-gray-200"></div>
                     )}
-                    
+
                     <div className="flex items-start space-x-3">
-                      <div className={`w-12 h-12 rounded-full border-2 border-white shadow flex items-center justify-center ${
-                        child.completed ? 'bg-green-100' : 'bg-gray-100'
-                      }`}>
+                      <div className={`w-12 h-12 rounded-full border-2 border-white shadow flex items-center justify-center ${child.completed ? 'bg-green-100' : 'bg-gray-100'
+                        }`}>
                         {child.completed ? (
                           <CheckCircle className="w-5 h-5 text-green-500" />
                         ) : (
                           <Circle className="w-5 h-5 text-gray-400" />
                         )}
                       </div>
-                      
+
                       <div className="flex-1 bg-white rounded-lg border border-gray-100 p-3 hover:border-gray-200 transition-colors">
                         <div className="flex items-center justify-between">
-                          <h5 className={`text-sm font-medium ${
-                            child.completed ? 'text-green-700' : 'text-gray-900'
-                          }`}>
+                          <h5 className={`text-sm font-medium ${child.completed ? 'text-green-700' : 'text-gray-900'
+                            }`}>
                             {child.title}
                           </h5>
                           {child.duration && (
@@ -252,22 +249,22 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
   }, 0);
 
   if (loading) {
-      return (
-        <div className="flex flex-col items-center justify-center p-8 text-center h-full">
-            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-gray-500">Generating Personal Learning Path for "{prompt}"...</p>
-        </div>
-      );
+    return (
+      <div className="flex flex-col items-center justify-center p-8 text-center h-full">
+        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-gray-500">Generating Personal Learning Path for "{prompt}"...</p>
+      </div>
+    );
   }
 
   if (nodes.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center p-8 text-center h-full">
-            <BookOpen className="w-12 h-12 text-gray-300 mb-2" />
-            <p className="text-gray-500">No learning path generated yet.</p>
-            <p className="text-xs text-gray-400 mt-1">Prompt: {prompt || 'None'}</p>
-        </div>
-      );
+    return (
+      <div className="flex flex-col items-center justify-center p-8 text-center h-full">
+        <BookOpen className="w-12 h-12 text-gray-300 mb-2" />
+        <p className="text-gray-500">No learning path generated yet.</p>
+        <p className="text-xs text-gray-400 mt-1">Prompt: {prompt || 'None'}</p>
+      </div>
+    );
   }
 
   return (
@@ -279,7 +276,7 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
           <h3 className="font-semibold text-gray-900">Learning Path</h3>
         </div>
         <div className="flex items-center space-x-2">
-          <button 
+          <button
             onClick={() => prompt && loadPath(prompt)}
             className="p-1 hover:bg-gray-100 rounded-full transition-colors"
             title="Regenerate Learning Path based on current chat"
@@ -310,7 +307,7 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
       {/* Timeline */}
       <div className="flex-1 overflow-y-auto p-4">
         <div className="space-y-2">
-          {nodes.map((node, index) => 
+          {nodes.map((node, index) =>
             renderTimelineNode(node, 0, index === nodes.length - 1)
           )}
         </div>

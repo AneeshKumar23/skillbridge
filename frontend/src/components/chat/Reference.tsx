@@ -96,11 +96,11 @@ export const Reference: React.FC<ReferenceProps> = ({ isExpanded, onToggle, prom
   };
 
   return (
-    <div className="h-full flex flex-col bg-white border-l border-gray-200">
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-3">
           <BookOpen className="w-6 h-6 text-blue-500" />
-          <h3 className="font-semibold text-gray-900">References</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">References</h3>
         </div>
         <button
           onClick={onToggle}
@@ -115,13 +115,13 @@ export const Reference: React.FC<ReferenceProps> = ({ isExpanded, onToggle, prom
           {references.map((reference) => (
             <div key={reference.id} className="space-y-3">
               <div
-                className="flex items-start space-x-3 p-3 rounded-lg border border-gray-200 hover:border-blue-300 cursor-pointer transition-all duration-200 hover:shadow-sm"
+                className="flex items-start space-x-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-500 cursor-pointer transition-all duration-200 hover:shadow-sm bg-white dark:bg-gray-800"
                 onClick={() => handleReferenceClick(reference)}
               >
                 <div className="flex-shrink-0 mt-1">{getIcon(reference.type)}</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between">
-                    <h4 className="text-sm font-medium text-gray-900 leading-tight">
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight">
                       {reference.title}
                     </h4>
                     {(reference.type === 'video' || reference.type === 'iframe') && (
@@ -130,7 +130,7 @@ export const Reference: React.FC<ReferenceProps> = ({ isExpanded, onToggle, prom
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
                     {reference.description}
                   </p>
                   <div className="flex items-center space-x-2 mt-2">

@@ -72,21 +72,21 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, elevenLabsA
   };
 
   return (
-    <div className="p-4 bg-white border-t border-gray-100 rounded-b-2xl shadow-sm">
+    <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 rounded-b-2xl">
       <div className="flex items-center gap-3">
         {/* Left action buttons */}
         <div className="flex items-center gap-2">
-          <button 
+          <button
             type="button"
             className="p-2 text-gray-400 hover:text-blue-500 rounded-full hover:bg-blue-50 transition-colors"
             aria-label="Attach file"
           >
             <Paperclip className="w-5 h-5" />
           </button>
-          
+
           {/* Language dropdown */}
           <div className="relative">
-            <button 
+            <button
               type="button"
               onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
               className="p-2 text-gray-400 hover:text-blue-500 rounded-full hover:bg-blue-50 transition-colors"
@@ -95,14 +95,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, elevenLabsA
               <Languages className="w-5 h-5" />
             </button>
             {showLanguageDropdown && (
-              <div className="absolute bottom-full left-0 mb-2 w-40 bg-white rounded-lg shadow-lg z-10 border border-gray-200">
+              <div className="absolute bottom-full left-0 mb-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-10 border border-gray-200 dark:border-gray-700">
                 {languageOptions.map((option) => (
                   <button
                     key={option.value}
                     onClick={() => selectLanguage(option.value as TranscriptionLanguage)}
-                    className={`w-full text-left px-4 py-2 hover:bg-blue-50 ${
-                      currentLanguage === option.value ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
-                    }`}
+                    className={`w-full text-left px-4 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 ${currentLanguage === option.value ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600' : 'text-gray-700 dark:text-gray-300'
+                      }`}
                   >
                     {option.label}
                   </button>
@@ -110,18 +109,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, elevenLabsA
               </div>
             )}
           </div>
-          
-          <button 
+
+          <button
             type="button"
             onClick={toggleRecording}
             disabled={isTranscribing}
-            className={`p-2 rounded-full transition-colors ${
-              isRecording 
-                ? 'text-red-500 bg-red-50 animate-pulse' 
+            className={`p-2 rounded-full transition-colors ${isRecording
+                ? 'text-red-500 bg-red-50 animate-pulse'
                 : isTranscribing
                   ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
                   : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50'
-            }`}
+              }`}
             aria-label={isRecording ? "Stop recording" : "Start recording"}
           >
             <Mic className="w-5 h-5" />
@@ -135,13 +133,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, elevenLabsA
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder={
-              isRecording ? "Listening... Speak now" : 
-              isTranscribing ? "Transcribing..." : 
-              "Type your message..."
+              isRecording ? "Listening... Speak now" :
+                isTranscribing ? "Transcribing..." :
+                  "Type your message..."
             }
-            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 resize-none transition-all duration-200 shadow-sm"
+            className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 resize-none transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
             rows={1}
-            style={{ 
+            style={{
               minHeight: '3rem',
               maxHeight: '7.5rem',
               scrollbarWidth: 'none'
@@ -155,16 +153,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, elevenLabsA
           type="button"
           onClick={handleSend}
           disabled={!inputMessage.trim() || isRecording || isTranscribing}
-          className={`p-2 rounded-xl transition-all duration-200 ${
-            inputMessage.trim() && !isRecording && !isTranscribing
+          className={`p-2 rounded-xl transition-all duration-200 ${inputMessage.trim() && !isRecording && !isTranscribing
               ? 'bg-blue-500 hover:bg-blue-600 shadow-md hover:scale-105'
               : 'bg-gray-200 cursor-not-allowed'
-          }`}
+            }`}
           aria-label="Send message"
         >
-          <Send className={`w-5 h-5 ${
-            inputMessage.trim() && !isRecording && !isTranscribing ? 'text-white' : 'text-gray-400'
-          }`} />
+          <Send className={`w-5 h-5 ${inputMessage.trim() && !isRecording && !isTranscribing ? 'text-white' : 'text-gray-400'
+            }`} />
         </button>
       </div>
 

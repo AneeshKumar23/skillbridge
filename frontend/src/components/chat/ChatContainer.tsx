@@ -25,8 +25,8 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ userId, onPromptCh
     const loadHistory = async () => {
       try {
         const history = await getChatHistory(userId);
-        const loadedMessages: Message[] = (history || []).map((msg: { id: string; role: string; content: string; created_at: string }) => ({
-          id: msg.id,
+        const loadedMessages: Message[] = (history || []).map((msg: { id: number | string; role: string; content: string; created_at: string }) => ({
+          id: String(msg.id),
           content: msg.content,
           isUser: msg.role === 'user',
           timestamp: new Date(msg.created_at),
@@ -62,7 +62,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ userId, onPromptCh
       isUser: true,
       timestamp: new Date(),
     };
-    
+
     if (onPromptChange) {
       onPromptChange(message);
     }
@@ -96,21 +96,21 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ userId, onPromptCh
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className="flex flex-col h-full bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       {/* Chat Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
             <span className="text-white font-semibold">AI</span>
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900">Learning Assistant</h3>
-            <p className="text-sm text-gray-500">Online now</p>
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100">Learning Assistant</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Online now</p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
           <div className="w-3 h-3 bg-green-400 rounded-full"></div>
-          <span className="text-sm text-gray-500">Active</span>
+          <span className="text-sm text-gray-500 dark:text-gray-400">Active</span>
         </div>
       </div>
 
@@ -121,16 +121,16 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ userId, onPromptCh
             <div
               className={`max-w-[90%] lg:max-w-2xl px-4 py-2 rounded-lg ${message.isUser
                 ? 'bg-blue-500 text-white rounded-br-none'
-                : 'bg-gray-100 text-gray-900 rounded-bl-none'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-none'
                 }`}
             >
               <ReactMarkdown
                 children={message.content}
                 remarkPlugins={[remarkGfm]}
                 components={{
-                  code({ node, inline, className, children, ...props }) {
+                  code({ node, className, children, ...props }) {
                     const match = /language-(\w+)/.exec(className || '');
-                    return !inline ? (
+                    return match ? (
                       <SyntaxHighlighter
                         style={oneDark}
                         language={match?.[1] || 'javascript'}
