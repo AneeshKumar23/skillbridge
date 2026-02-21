@@ -94,8 +94,11 @@ class SkillService:
         """Call Gemini to suggest skills. Does NOT save — frontend confirms first."""
         model = genai.GenerativeModel(MODEL_NAME)
         response = model.generate_content(
-            f"Based on the user's interest: '{interest}', suggest 5-10 relevant digital skills. "
-            "Respond only with a comma-separated list, no extra text."
+            f"The user wants to learn about: '{interest}'.\n"
+            "Suggest 5-10 practical skills that are DIRECTLY relevant to that specific topic or domain.\n"
+            "Do NOT suggest generic digital marketing, social media, or online business skills unless the interest is specifically about those.\n"
+            "Match the skill suggestions closely to the domain of the interest (e.g., if it's tailoring → suggest pattern making, hand stitching, fabric selection, etc.).\n"
+            "Respond ONLY with a comma-separated list of skill names. No explanations, no numbering, no extra text."
         )
         return [s.strip() for s in response.text.split(",") if s.strip()]
 
