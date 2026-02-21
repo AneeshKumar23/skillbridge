@@ -143,7 +143,7 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
           {/* Content */}
           <div className="flex-1 min-w-0">
             <div
-              className={`bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-200 ${hasChildren ? 'cursor-pointer' : ''
+              className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-all duration-200 ${hasChildren ? 'cursor-pointer' : ''
                 }`}
               onClick={() => hasChildren && toggleNode(node.id)}
             >
@@ -159,7 +159,7 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
                         )}
                       </button>
                     )}
-                    <h4 className={`font-semibold ${node.completed ? 'text-green-700' : 'text-gray-900'
+                    <h4 className={`font-semibold ${node.completed ? 'text-green-700 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'
                       }`}>
                       {node.title}
                     </h4>
@@ -168,7 +168,7 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
                     )}
                   </div>
 
-                  <div className="flex items-center space-x-4 text-sm text-gray-500">
+                  <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                     {node.duration && (
                       <div className="flex items-center space-x-1">
                         <Clock className="w-3 h-3" />
@@ -213,9 +213,9 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
                         )}
                       </div>
 
-                      <div className="flex-1 bg-white rounded-lg border border-gray-100 p-3 hover:border-gray-200 transition-colors">
+                      <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 p-3 hover:border-gray-200 dark:hover:border-gray-600 transition-colors">
                         <div className="flex items-center justify-between">
-                          <h5 className={`text-sm font-medium ${child.completed ? 'text-green-700' : 'text-gray-900'
+                          <h5 className={`text-sm font-medium ${child.completed ? 'text-green-700 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'
                             }`}>
                             {child.title}
                           </h5>
@@ -270,10 +270,10 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-3">
           <BookOpen className="w-6 h-6 text-blue-500" />
-          <h3 className="font-semibold text-gray-900">Learning Path</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">Learning Path</h3>
         </div>
         <div className="flex items-center space-x-2">
           <button
@@ -291,10 +291,10 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
       </div>
 
       {/* Progress Overview */}
-      <div className="p-4 bg-blue-50 border-b border-gray-200">
+      <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-blue-900">Overall Progress</span>
-          <span className="text-sm text-blue-700">{Math.round((completedCount / (totalCount || 1)) * 100)}%</span>
+          <span className="text-sm font-medium text-blue-900 dark:text-blue-300">Overall Progress</span>
+          <span className="text-sm text-blue-700 dark:text-blue-400">{Math.round((completedCount / (totalCount || 1)) * 100)}%</span>
         </div>
         <div className="w-full bg-blue-200 rounded-full h-2">
           <div

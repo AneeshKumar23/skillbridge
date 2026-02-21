@@ -14,6 +14,7 @@ export const Chat: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [currentPage, setCurrentPage] = useState<PageType>('chat');
   const [currentPrompt, setCurrentPrompt] = useState<string>('');
+  const [selectedSkill, setSelectedSkill] = useState<string | undefined>(undefined);
   const { user, isLoading } = useUser();
   const navigate = useNavigate();
 
@@ -99,7 +100,10 @@ export const Chat: React.FC = () => {
           onClose={closeMobileSidebar}
           onToggleCollapse={toggleCollapse}
           onNavigate={handleNavigation}
-          onSkillSelect={setCurrentPrompt}
+          onSkillSelect={(skill) => {
+            setSelectedSkill(skill);   // resets chat
+            setCurrentPrompt(skill);   // updates References & LearningPath
+          }}
           userId={user.id}
           user={user}
         />
@@ -107,7 +111,7 @@ export const Chat: React.FC = () => {
         {/* Chat Container */}
         <div className="flex-1 p-2 sm:p-4 pr-12 sm:pr-16 overflow-hidden">
           <div className="h-full">
-            <ChatContainer userId={user.id} onPromptChange={setCurrentPrompt} />
+            <ChatContainer userId={user.id} currentSkill={selectedSkill} onPromptChange={setCurrentPrompt} />
           </div>
         </div>
 
