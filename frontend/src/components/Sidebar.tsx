@@ -78,14 +78,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
-  // Flatten skills for rendering — each ProfileItem has skills[]
+  // Flatten to per-skill entries, each carrying their own status from their row
   const flatSkills = skillHistory.flatMap(item =>
-    (item.skills || []).map(skill => ({ skill, status: item.status ?? 'active', created_at: item.created_at }))
+    (item.skills || []).map(skill => ({
+      skill,
+      status: item.status ?? 'active',
+      created_at: item.created_at,
+    }))
   );
 
-  const filtered = flatSkills.filter(s =>
-    s.skill.toLowerCase().includes(searchTerm.toLowerCase())
+  // Group by created_at so that skills added together stay visually grouped
+  // even after one skill is split into its own row by a status change
+  const grouped = flatSkills.reduce<Record<string, { skill: string; status: string; created_at: string }[]>>(
+    (acc, entry) => {
+      const key = entry.created_at; // preserves original date on split
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(entry);
+      return acc;
+    },
+    {}
   );
+
+  // Sort groups by date, then filter by search
+  const filteredGroups = Object.entries(grouped)
+    .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
+    .map(([created_at, skills]) => ({
+      created_at,
+      skills: skills.filter(s => s.skill.toLowerCase().includes(searchTerm.toLowerCase())),
+    }))
+    .filter(g => g.skills.length > 0);
 
   const formatDate = (dt: string) => {
     const d = new Date(dt);
@@ -246,7 +267,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <BookOpen className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                 <h4 className="font-medium text-gray-900 dark:text-gray-100 text-sm">Skills History</h4>
               </div>
-              <span className="text-xs text-gray-400 dark:text-gray-500">{filtered.length}</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">
+                {filteredGroups.reduce((acc, g) => acc + g.skills.length, 0)}
+              </span>
             </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
@@ -264,7 +287,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {isLoading && (
               <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-6">Loading skills…</p>
             )}
-            {!isLoading && filtered.length === 0 && (
+            {!isLoading && filteredGroups.length === 0 && (
               <div className="text-center py-6">
                 <BookOpen className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
                 <p className="text-xs text-gray-400 dark:text-gray-500">
@@ -272,30 +295,57 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </p>
               </div>
             )}
-            <div className="space-y-1.5">
-              {filtered.map(({ skill, status, created_at }, idx) => (
-                <div
-                  key={`${skill}-${idx}`}
-                  className="group flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                >
-                  <StatusIcon status={status} />
-                  <div
-                    className="flex-1 min-w-0 cursor-pointer"
-                    onClick={() => onSkillSelect?.(skill)}
-                    title={`Load roadmap for "${skill}"`}
-                  >
-                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{skill}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">{formatDate(created_at)}</p>
+            <div className="space-y-3">
+              {filteredGroups.map((group) => {
+                const isGroup = group.skills.length > 1;
+                return (
+                  <div key={group.created_at} className="relative">
+                    {/* Group header — only shown for snapshots with multiple skills */}
+                    {isGroup && (
+                      <div className="flex items-center gap-1.5 mb-1 px-1">
+                        <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium whitespace-nowrap">
+                          Added together · {formatDate(group.created_at)}
+                        </span>
+                        <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+                      </div>
+                    )}
+
+                    {/* Skills in this group */}
+                    <div className={`space-y-0.5 ${isGroup ? 'pl-3 border-l-2 border-blue-200 dark:border-blue-800 ml-1' : ''}`}>
+                      {group.skills.map(({ skill, status }) => {
+                        return (
+                          <div
+                            key={skill}
+                            className="group flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                          >
+                            <StatusIcon status={status} />
+                            <div
+                              className="flex-1 min-w-0 cursor-pointer"
+                              onClick={() => onSkillSelect?.(skill)}
+                              title={`Load roadmap for "${skill}"`}
+                            >
+                              <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                                {skill}
+                              </p>
+                              {!isGroup && (
+                                <p className="text-xs text-gray-400 dark:text-gray-500">{formatDate(group.created_at)}</p>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => handleStatusCycle(skill, status)}
+                              className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusBadge[status] ?? statusBadge.active} opacity-0 group-hover:opacity-100 transition-opacity shrink-0`}
+                              title="Click to cycle status: active → completed → paused"
+                            >
+                              {status}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <button
-                    onClick={() => handleStatusCycle(skill, status)}
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusBadge[status] ?? statusBadge.active} opacity-0 group-hover:opacity-100 transition-opacity`}
-                    title="Click to cycle status"
-                  >
-                    {status}
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

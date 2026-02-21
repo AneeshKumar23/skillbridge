@@ -145,25 +145,47 @@ class SkillService:
 
     @staticmethod
     def update_status(user_id: str, skill: str, status: str) -> dict:
-        """Update the status of the most recent snapshot row that contains the given skill."""
+        """Update status for a single skill.
+
+        If the skill shares a snapshot row with others, it is extracted into
+        its own row so the sibling skills are not affected.
+        """
         valid = {"active", "completed", "paused"}
         if status not in valid:
             raise HTTPException(status_code=400, detail=f"status must be one of {valid}")
-        # Find the latest snapshot containing this skill
+
+        # Find the latest snapshot row containing this skill
         rows = (
             supabase.table("user_skills")
-            .select("id, skills")
+            .select("id, skills, status, created_at")
             .eq("user_id", user_id)
             .not_.is_("skills", "null")
             .order("created_at", desc=True)
             .execute()
         ).data or []
-        target_id = next(
-            (r["id"] for r in rows if r.get("skills") and skill in r["skills"]), None
+
+        target_row = next(
+            (r for r in rows if r.get("skills") and skill in r["skills"]), None
         )
-        if target_id is None:
+        if target_row is None:
             raise HTTPException(status_code=404, detail=f"Skill '{skill}' not found")
-        supabase.table("user_skills").update({"status": status}).eq("id", target_id).execute()
+
+        siblings = [s for s in target_row["skills"] if s != skill]
+
+        if siblings:
+            # Remove this skill from the shared row (siblings keep their status)
+            supabase.table("user_skills").update({"skills": siblings}).eq("id", target_row["id"]).execute()
+            # Insert a new individual row for this skill with the new status
+            supabase.table("user_skills").insert({
+                "user_id": user_id,
+                "skills": [skill],
+                "status": status,
+                "created_at": target_row["created_at"],   # preserve original date
+            }).execute()
+        else:
+            # Already alone in its row — just update status in-place
+            supabase.table("user_skills").update({"status": status}).eq("id", target_row["id"]).execute()
+
         return {"msg": "Status updated", "skill": skill, "status": status}
 
 
