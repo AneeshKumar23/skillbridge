@@ -57,6 +57,23 @@ export interface ProfileItem {
   created_at: string;
 }
 
+export interface Room {
+  id: number;
+  skill: string;
+  category: string;
+  description: string;
+  created_at: string;
+}
+
+export interface RoomMessage {
+  id: number;
+  room_id: number;
+  user_id: string;
+  username: string;
+  content: string;
+  created_at: string;
+}
+
 // ── Session helpers ────────────────────────────────────────────────────────────
 
 export const getStoredToken = (): string | null => localStorage.getItem('accessToken');
@@ -306,3 +323,26 @@ export const getProfileItems = async (userId: string): Promise<ProfileItem[]> =>
   );
 };
 
+// ── Rooms ────────────────────────────────────────────────────────────────────
+
+/** Get all skill chat rooms */
+export const getRooms = async () => {
+  const res = await fetch(`${API_BASE_URL}/rooms`, { headers: authHeaders() });
+  return handleResponse<Room[]>(res);
+};
+
+/** Get message history for a room */
+export const getRoomMessages = async (roomId: number, limit: number = 50) => {
+  const res = await fetch(`${API_BASE_URL}/rooms/${roomId}/messages?limit=${limit}`, { headers: authHeaders() });
+  return handleResponse<RoomMessage[]>(res);
+};
+
+/** Post a message to a room */
+export const sendRoomMessage = async (roomId: number, userId: string, username: string, content: string) => {
+  const res = await fetch(`${API_BASE_URL}/rooms/${roomId}/messages?user_id=${userId}`, {
+    method: 'POST',
+    headers: jsonHeaders(),
+    body: JSON.stringify({ username, content }),
+  });
+  return handleResponse<RoomMessage>(res);
+};

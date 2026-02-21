@@ -69,3 +69,9 @@ class ChatRequest(BaseModel):
 class ResourceRequest(BaseModel):
     """Body for POST /users/{id}/resources/youtube and /articles."""
     topic: str
+# ── Rooms ────────────────────────────────────────────────────────────────────
+
+class RoomMessageRequest(BaseModel):
+    """Body for POST /rooms/{room_id}/messages."""
+    username: str
+    content: str

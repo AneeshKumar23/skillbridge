@@ -119,6 +119,9 @@ class SkillService:
         }).execute()
         # Keep users.skills in sync for backward compat
         supabase.table("users").update({"skills": new_values}).eq("id", user_id).execute()
+        # Auto-create a chat room for every skill (idempotent)
+        for skill in new_values:
+            RoomService.ensure_room(skill)
         return {"msg": "Skills saved", "skills": new_values}
 
     @staticmethod
@@ -229,6 +232,78 @@ class LanguageService:
                 filtered.append(r)
                 prev_lang = curr_lang
         return filtered
+
+
+# ── Rooms ────────────────────────────────────────────────────────────────────
+
+class RoomService:
+    CATEGORIES = [
+        "Programming", "Web Development", "Backend & APIs", "AI & Machine Learning",
+        "Crafts & Fashion", "Agriculture", "Music & Arts", "Trade Skills",
+        "Health & Wellness", "Science", "Business", "Sports", "Language Learning",
+        "Design", "Other"
+    ]
+
+    @staticmethod
+    def _categorise(skill: str) -> str:
+        """Ask Gemini to assign a single category to a skill."""
+        try:
+            cats = ", ".join(RoomService.CATEGORIES)
+            model = genai.GenerativeModel(MODEL_NAME)
+            resp = model.generate_content(
+                f"Which single category best describes the skill '{skill}'?\n"
+                f"Categories: {cats}\n"
+                f"Reply with ONLY the category name, nothing else."
+            )
+            answer = resp.text.strip().strip('"').strip("'")
+            # Validate — if Gemini hallucinates, fall back to Other
+            return answer if answer in RoomService.CATEGORIES else "Other"
+        except Exception:
+            return "Other"
+
+    @staticmethod
+    def ensure_room(skill: str) -> dict:
+        """Create a room for `skill` if one doesn't exist yet."""
+        key = skill.lower().strip()
+        existing = supabase.table("rooms").select("id, skill, category").eq("skill", key).execute()
+        if existing.data:
+            return existing.data[0]
+        category = RoomService._categorise(skill)
+        description = f"Community chat room for {skill}"
+        result = supabase.table("rooms").insert({
+            "skill": key,
+            "category": category,
+            "description": description,
+        }).execute()
+        return result.data[0] if result.data else {}
+
+    @staticmethod
+    def list_rooms() -> list:
+        """Return all rooms ordered by category then skill name."""
+        result = supabase.table("rooms").select("*").order("category").order("skill").execute()
+        return result.data or []
+
+    @staticmethod
+    def get_messages(room_id: int, limit: int = 50) -> list:
+        result = (
+            supabase.table("room_messages")
+            .select("*")
+            .eq("room_id", room_id)
+            .order("created_at", desc=False)
+            .limit(limit)
+            .execute()
+        )
+        return result.data or []
+
+    @staticmethod
+    def post_message(room_id: int, user_id: str, username: str, content: str) -> dict:
+        result = supabase.table("room_messages").insert({
+            "room_id": room_id,
+            "user_id": user_id,
+            "username": username,
+            "content": content,
+        }).execute()
+        return result.data[0] if result.data else {}
 
 
 # ── Roadmap ───────────────────────────────────────────────────────────────────
@@ -533,3 +608,22 @@ def certificate_endpoint(user_id: str):
 
     return {"msg": "Certificate generated", "url": public_url}
 
+
+# ── Rooms ────────────────────────────────────────────────────────────────────
+
+@app.get("/rooms", summary="List all skill chat rooms")
+def list_rooms():
+    return RoomService.list_rooms()
+
+@app.get("/rooms/{room_id}/messages", summary="Get message history for a room")
+def get_room_messages(room_id: int, limit: int = 50):
+    return RoomService.get_messages(room_id, limit)
+
+@app.post("/rooms/{room_id}/messages", summary="Post a message to a room")
+def post_room_message(room_id: int, user_id: str, req: RoomMessageRequest):
+    return RoomService.post_message(room_id, user_id, req.username, req.content)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
