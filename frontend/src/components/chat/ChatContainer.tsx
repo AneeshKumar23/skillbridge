@@ -297,8 +297,8 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ userId, currentSki
                         key={opt.value}
                         onClick={() => { setCurrentLanguage(opt.value as TranscriptionLanguage); setShowLanguageDropdown(false); }}
                         className={`w-full text-left px-3 py-2 text-sm transition-colors ${currentLanguage === opt.value
-                            ? 'bg-blue-50 dark:bg-blue-600 text-blue-700 dark:text-white'
-                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                          ? 'bg-blue-50 dark:bg-blue-600 text-blue-700 dark:text-white'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                           }`}
                       >
                         {opt.label}
@@ -335,8 +335,8 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ userId, currentSki
                 onClick={handleSend}
                 disabled={!inputMessage.trim() || isRecording || isTranscribing}
                 className={`p-1.5 rounded-lg transition-all ${inputMessage.trim() && !isRecording && !isTranscribing
-                    ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-700 dark:hover:bg-gray-200'
-                    : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-700 dark:hover:bg-gray-200'
+                  : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
                   }`}
               >
                 <Send className="w-4 h-4" />
@@ -344,7 +344,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ userId, currentSki
             </div>
           </div>
           <p className="text-center text-xs text-gray-400 dark:text-gray-600 mt-2">
-            SkillBridge AI can make mistakes. Verify important information.
+            Selected Language: {languageOptions.find(l => l.value === currentLanguage)?.label ?? currentLanguage}
           </p>
         </div>
       </div>

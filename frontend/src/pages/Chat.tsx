@@ -5,9 +5,10 @@ import { Sidebar } from '../components/Sidebar';
 import { ChatContainer } from '../components/chat/ChatContainer';
 import { RightSidebar } from '../components/RightSidebar';
 import { Certificates } from './Certificates';
+import { Communities } from './Communities';
 import { useUser } from '../context/UserContext';
 
-type PageType = 'chat' | 'certificates' | 'settings';
+type PageType = 'chat' | 'certificates' | 'settings' | 'communities';
 
 export const Chat: React.FC = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -63,6 +64,10 @@ export const Chat: React.FC = () => {
 
   if (currentPage === 'certificates') {
     return <Certificates onBack={handleBackToChat} />;
+  }
+
+  if (currentPage === 'communities') {
+    return <Communities onBack={handleBackToChat} />;
   }
 
   if (currentPage === 'settings') {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Award, Settings, BookOpen, User, Search, MoreHorizontal, ChevronLeft, ChevronRight, CheckCircle2, Clock, PauseCircle } from 'lucide-react';
+import { Plus, Award, Settings, BookOpen, User, Search, MoreHorizontal, ChevronLeft, ChevronRight, CheckCircle2, Clock, PauseCircle, Users } from 'lucide-react';
 import { getSkillHistory, updateSkillStatus, ProfileItem } from '../../api/db';
 import { SuggestSkillsModal } from './SuggestSkillsModal';
 
@@ -157,6 +157,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Award className="w-5 h-5" />
           </button>
 
+          {/* Communities */}
+          <button
+            onClick={() => onNavigate('communities')}
+            className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+            title="Communities"
+          >
+            <Users className="w-5 h-5" />
+          </button>
+
           {/* Settings */}
           <button
             onClick={() => onNavigate('settings')}
@@ -241,6 +250,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div>
                 <h4 className="font-medium text-yellow-900 dark:text-yellow-200 text-sm">Certifications</h4>
                 <p className="text-xs text-yellow-700 dark:text-yellow-400">View earned certificates</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Communities Card */}
+        <div className="px-4 pb-3">
+          <div
+            className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 cursor-pointer hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 transition-colors"
+            onClick={() => onNavigate('communities')}
+          >
+            <div className="flex items-center space-x-2">
+              <Users className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+              <div>
+                <h4 className="font-medium text-blue-900 dark:text-blue-200 text-sm">Communities</h4>
+                <p className="text-xs text-blue-700 dark:text-blue-400">Connect with learners</p>
               </div>
             </div>
           </div>
