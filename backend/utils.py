@@ -139,3 +139,40 @@ grab all the contents from internet and give the article links with title in the
         data = json.loads(text)
 
     return data
+
+
+def get_embedding(text: str):
+    """Return an embedding vector for `text` or None if unavailable.
+
+    Priority:
+    1. Use Gemini via `google.generativeai` when `MODEL_API_KEY` is set.
+    2. Fallback to OpenAI when `OPENAI_API_KEY` is set.
+    If neither is configured the function returns None so callers can skip vector storage.
+    """
+    import os
+
+    # 1) Try Gemini via google.generativeai
+    MODEL_API_KEY = os.getenv("MODEL_API_KEY")
+    if MODEL_API_KEY:
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=MODEL_API_KEY)
+            model = os.getenv("EMBEDDING_MODEL", "textembedding-gecko-001")
+            resp = genai.get_embeddings(model=model, input=text)
+            return resp["data"][0]["embedding"]
+        except Exception as e:
+            print("Gemini embedding error:", e)
+
+    # 2) Fallback to OpenAI if available
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    if OPENAI_API_KEY:
+        try:
+            import openai
+            model = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
+            openai.api_key = OPENAI_API_KEY
+            resp = openai.Embedding.create(model=model, input=text)
+            return resp["data"][0]["embedding"]
+        except Exception as e:
+            print("OpenAI embedding error:", e)
+
+    return None
