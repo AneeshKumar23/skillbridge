@@ -6,6 +6,12 @@
 -- ── Users profile table ────────────────────────────────────────
 -- id matches Supabase Auth UUID so both systems stay in sync
 
+-- ── pgvector integration ───────────────────────────────────────
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- To add the embedding column to your user_chat_messages table, run:
+-- ALTER TABLE public.user_chat_messages ADD COLUMN IF NOT EXISTS embedding vector(768);
+
 CREATE TABLE IF NOT EXISTS public.users (
   id            TEXT PRIMARY KEY,       -- Supabase Auth user UUID (auth.users.id)
   email         TEXT UNIQUE NOT NULL,

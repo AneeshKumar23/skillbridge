@@ -360,8 +360,19 @@ class ChatService:
     @staticmethod
     def send(user_id: str, message: str) -> dict:
         """Save user message → call Gemini → save reply → return response."""
+        
+        # Get embedding for user message
+        try:
+            msg_embed_resp = genai.embed_content(
+                model="models/text-embedding-004", 
+                content=message
+            )
+            msg_embedding = msg_embed_resp['embedding']
+        except Exception:
+            msg_embedding = None
+
         supabase.table("user_chat_messages").insert({
-            "user_id": user_id, "role": "user", "content": message,
+            "user_id": user_id, "role": "user", "content": message, "embedding": msg_embedding
         }).execute()
 
         try:
@@ -370,8 +381,18 @@ class ChatService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"AI error: {e}")
 
+        # Get embedding for AI response
+        try:
+            ai_embed_resp = genai.embed_content(
+                model="models/text-embedding-004", 
+                content=ai_text
+            )
+            ai_embedding = ai_embed_resp['embedding']
+        except Exception:
+            ai_embedding = None
+
         supabase.table("user_chat_messages").insert({
-            "user_id": user_id, "role": "assistant", "content": ai_text,
+            "user_id": user_id, "role": "assistant", "content": ai_text, "embedding": ai_embedding
         }).execute()
 
         return {"response": ai_text}

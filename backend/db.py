@@ -5,7 +5,7 @@ FastAPI routes use supabase-py for all runtime queries.
 
 from sqlalchemy import (
     Column, String, Boolean, Text, BigInteger, TIMESTAMP, ARRAY,
-    ForeignKey, func
+    ForeignKey, func, Float
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import declarative_base
@@ -62,6 +62,7 @@ class UserChatMessage(Base):
     user_id    = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     role       = Column(Text, nullable=False)   # 'user' | 'assistant'
     content    = Column(Text, nullable=False)
+    embedding  = Column(ARRAY(Float), nullable=True)  # 768-D array for embeddings
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
 
