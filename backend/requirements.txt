@@ -21,6 +21,7 @@ httplib2==0.22.0
 httpx==0.28.1
 idna==3.10
 pillow==11.3.0
+pgvector>=0.3.0
 supabase==2.15.2
 proto-plus==1.26.1
 protobuf==5.29.5

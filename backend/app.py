@@ -364,7 +364,7 @@ class ChatService:
         # Get embedding for user message
         try:
             msg_embed_resp = genai.embed_content(
-                model="models/text-embedding-004", 
+                model="models/gemini-embedding-001", 
                 content=message
             )
             msg_embedding = msg_embed_resp['embedding']
@@ -384,7 +384,7 @@ class ChatService:
         # Get embedding for AI response
         try:
             ai_embed_resp = genai.embed_content(
-                model="models/text-embedding-004", 
+                model="models/gemini-embedding-001", 
                 content=ai_text
             )
             ai_embedding = ai_embed_resp['embedding']
