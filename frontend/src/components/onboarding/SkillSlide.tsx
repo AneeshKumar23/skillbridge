@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { suggestSkills } from '../../../api/db';
+import { suggestSkills, saveSkills, getStoredUserId } from '../../../api/db';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +39,8 @@ const SkillSlide = ({ formData, updateFormData, onNext }: SkillSlideProps) => {
     setShowSuggestions(false);
 
     try {
-      const response = await suggestSkills(userInput);
+      const uid = getStoredUserId() || '';
+      const response = await suggestSkills(uid, userInput);
       if (response.skills && response.skills.length > 0) {
         setSuggestedSkills(response.skills);
         setShowSuggestions(true);
@@ -70,8 +71,16 @@ const SkillSlide = ({ formData, updateFormData, onNext }: SkillSlideProps) => {
     );
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (selectedSkills.length > 0) {
+      const uid = getStoredUserId() || '';
+      if (uid) {
+        try {
+          await saveSkills(uid, selectedSkills);
+        } catch (err) {
+          console.error('Failed to save skills:', err);
+        }
+      }
       onNext();
     }
   };

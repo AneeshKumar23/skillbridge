@@ -9,6 +9,7 @@ import {
   Play,
   X,
 } from 'lucide-react';
+import { getArticleResources, getYouTubeResources, getStoredUserId } from '../../../api/db';
 
 interface Reference {
   id: string;
@@ -23,9 +24,10 @@ interface ReferenceProps {
   isExpanded: boolean;
   onToggle: () => void;
   prompt: string;
+  userId?: string;
 }
 
-export const Reference: React.FC<ReferenceProps> = ({ isExpanded, onToggle, prompt }) => {
+export const Reference: React.FC<ReferenceProps> = ({ isExpanded, onToggle, prompt, userId }) => {
   const [references, setReferences] = useState<Reference[]>([]);
   const [activeEmbed, setActiveEmbed] = useState<string | null>(null);
 
@@ -33,53 +35,44 @@ export const Reference: React.FC<ReferenceProps> = ({ isExpanded, onToggle, prom
     const fetchResources = async () => {
       if (!prompt) return;
 
+      const uid = userId || getStoredUserId() || '';
       const newRefs: Reference[] = [];
 
       try {
-        const wikiRes = await fetch(`http://localhost:8000/api/generate_article?prompt=${encodeURIComponent(prompt)}`, { method: 'POST' });
-        if (wikiRes.ok) {
-           const wikiData = await wikiRes.json();
-           if (wikiData.articles && Array.isArray(wikiData.articles)) {
-             wikiData.articles.forEach((article: any, index: number) => {
-               newRefs.push({
-                 id: `article-${index}`,
-                 title: article.title,
-                 type: 'document',
-                 url: article.link,
-                 description: `Read more about ${prompt} on ${new URL(article.link).hostname}`,
-               });
-             });
-           }
-        } else {
-             console.error("Wiki/Article fetch failed", wikiRes.status);
+        const artData = await getArticleResources(uid, prompt);
+        if (artData.articles && Array.isArray(artData.articles)) {
+          artData.articles.forEach((article: any, index: number) => {
+            newRefs.push({
+              id: `article-${index}`,
+              title: article.title,
+              type: 'document',
+              url: article.link,
+              description: `Read more about ${prompt} on ${new URL(article.link).hostname}`,
+            });
+          });
         }
-      } catch (e) { console.error("Wiki fetch error", e); }
+      } catch (e) { console.error('Article fetch error', e); }
 
       try {
-        const youtubeRes = await fetch(`http://localhost:8000/api/generate_youtube_content?prompt=${encodeURIComponent(prompt)}`, { method: 'POST' });
-        if (youtubeRes.ok) {
-           const youtubeData = await youtubeRes.json();
-           if (youtubeData.materials && Array.isArray(youtubeData.materials)) {
-               youtubeData.materials.forEach((video: any, index: number) => {
-                   newRefs.push({
-                       id: `video-${index}`,
-                       title: video.title,
-                       type: 'video',
-                       url: video.link,
-                       description: youtubeData.description || video.title,
-                   });
-               });
-           }
-        } else {
-             console.error("Youtube fetch failed", youtubeRes.status);
+        const ytData = await getYouTubeResources(uid, prompt);
+        if (ytData.materials && Array.isArray(ytData.materials)) {
+          ytData.materials.forEach((video: any, index: number) => {
+            newRefs.push({
+              id: `video-${index}`,
+              title: video.title,
+              type: 'video',
+              url: video.link,
+              description: ytData.description || video.title,
+            });
+          });
         }
-      } catch (e) { console.error("Youtube fetch error", e); }
+      } catch (e) { console.error('YouTube fetch error', e); }
 
       setReferences(newRefs);
     };
 
     fetchResources();
-  }, [prompt]);
+  }, [prompt, userId]);
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -103,11 +96,11 @@ export const Reference: React.FC<ReferenceProps> = ({ isExpanded, onToggle, prom
   };
 
   return (
-    <div className="h-full flex flex-col bg-white border-l border-gray-200">
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-3">
           <BookOpen className="w-6 h-6 text-blue-500" />
-          <h3 className="font-semibold text-gray-900">References</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">References</h3>
         </div>
         <button
           onClick={onToggle}
@@ -122,13 +115,13 @@ export const Reference: React.FC<ReferenceProps> = ({ isExpanded, onToggle, prom
           {references.map((reference) => (
             <div key={reference.id} className="space-y-3">
               <div
-                className="flex items-start space-x-3 p-3 rounded-lg border border-gray-200 hover:border-blue-300 cursor-pointer transition-all duration-200 hover:shadow-sm"
+                className="flex items-start space-x-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-500 cursor-pointer transition-all duration-200 hover:shadow-sm bg-white dark:bg-gray-800"
                 onClick={() => handleReferenceClick(reference)}
               >
                 <div className="flex-shrink-0 mt-1">{getIcon(reference.type)}</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between">
-                    <h4 className="text-sm font-medium text-gray-900 leading-tight">
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight">
                       {reference.title}
                     </h4>
                     {(reference.type === 'video' || reference.type === 'iframe') && (
@@ -137,7 +130,7 @@ export const Reference: React.FC<ReferenceProps> = ({ isExpanded, onToggle, prom
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
                     {reference.description}
                   </p>
                   <div className="flex items-center space-x-2 mt-2">

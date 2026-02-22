@@ -45,6 +45,10 @@ class SkillsSaveRequest(BaseModel):
     """Body for PUT /users/{id}/skills — confirmed skill list from frontend."""
     skills: List[str]
 
+class SkillStatusUpdate(BaseModel):
+    """Body for PATCH /users/{id}/skills/{skill} — update a skill's status."""
+    status: str  # 'active' | 'completed' | 'paused'
+
 
 # ── Roadmap ───────────────────────────────────────────────────────────────────
 
@@ -65,3 +69,9 @@ class ChatRequest(BaseModel):
 class ResourceRequest(BaseModel):
     """Body for POST /users/{id}/resources/youtube and /articles."""
     topic: str
+# ── Rooms ────────────────────────────────────────────────────────────────────
+
+class RoomMessageRequest(BaseModel):
+    """Body for POST /rooms/{room_id}/messages."""
+    username: str
+    content: str

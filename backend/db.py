@@ -86,3 +86,21 @@ class UserResource(Base):
     topic      = Column(Text, nullable=False)
     data       = Column(JSONB, nullable=False)   # {"videos":[...]} | {"articles":[...]} | {"url":"..."}
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+
+
+# ── User skills table (skills snapshot + language history) ───────────────────
+
+class UserSkill(Base):
+    """Unified table for skill and language history.
+
+    Skill snapshot row : skills = ['python', 'react'], language = NULL
+    Language change row: skills = NULL,                 language = 'English'
+    """
+    __tablename__ = "user_skills"
+
+    id         = Column(BigInteger, primary_key=True, autoincrement=True)
+    user_id    = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    skills     = Column(ARRAY(Text), nullable=True)   # array of skill names (skill rows)
+    language   = Column(Text, nullable=True)          # language name (language rows)
+    status     = Column(Text, nullable=True)          # 'active'|'completed'|'paused' (skills only)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())

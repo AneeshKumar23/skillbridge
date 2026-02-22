@@ -94,18 +94,216 @@ class SkillService:
         """Call Gemini to suggest skills. Does NOT save — frontend confirms first."""
         model = genai.GenerativeModel(MODEL_NAME)
         response = model.generate_content(
-            f"Based on the user's interest: '{interest}', suggest 5-10 relevant digital skills. "
-            "Respond only with a comma-separated list, no extra text."
+            f"The user wants to learn about: '{interest}'.\n"
+            "Suggest 5-10 practical skills that are DIRECTLY relevant to that specific topic or domain.\n"
+            "Do NOT suggest generic digital marketing, social media, or online business skills unless the interest is specifically about those.\n"
+            "Match the skill suggestions closely to the domain of the interest (e.g., if it's tailoring → suggest pattern making, hand stitching, fabric selection, etc.).\n"
+            "Respond ONLY with a comma-separated list of skill names. No explanations, no numbering, no extra text."
         )
         return [s.strip() for s in response.text.split(",") if s.strip()]
 
     @staticmethod
     def save(user_id: str, skills: List[str]) -> dict:
-        """Persist the confirmed skill list on the user's profile."""
-        result = supabase.table("users").update({"skills": skills}).eq("id", user_id).execute()
-        if not result.data:
-            raise HTTPException(status_code=404, detail="User not found")
-        return {"msg": "Skills saved", "skills": skills}
+        """Insert a skills-snapshot row (full list) into user_skills, then sync users.skills."""
+        new_values = list(set(skills))  # deduplicate
+        
+        # Get latest language to include in the snapshot
+        latest = supabase.table("user_skills").select("language").eq("user_id", user_id).not_.is_("language", "null").order("created_at", desc=True).limit(1).execute()
+        lang = latest.data[0]["language"] if latest.data else None
+
+        supabase.table("user_skills").insert({
+            "user_id": user_id,
+            "skills": new_values,
+            "language": lang,
+            "status": "active",
+        }).execute()
+        # Keep users.skills in sync for backward compat
+        supabase.table("users").update({"skills": new_values}).eq("id", user_id).execute()
+        # Auto-create a chat room for every skill (idempotent)
+        for skill in new_values:
+            RoomService.ensure_room(skill)
+        return {"msg": "Skills saved", "skills": new_values}
+
+    @staticmethod
+    def get_history(user_id: str) -> list:
+        """Return all skill-snapshot rows for the user, filtering out duplicates where skills didn't change."""
+        result = (
+            supabase.table("user_skills")
+            .select("id, skills, status, created_at")
+            .eq("user_id", user_id)
+            .not_.is_("skills", "null")
+            .order("created_at")
+            .execute()
+        )
+        rows = result.data or []
+        # Filter out rows where skills are identical to the previous row
+        filtered = []
+        prev_skills = None
+        for r in rows:
+            curr_skills = sorted(r["skills"]) if r.get("skills") else []
+            if curr_skills != prev_skills:
+                filtered.append(r)
+                prev_skills = curr_skills
+        return filtered
+
+    @staticmethod
+    def update_status(user_id: str, skill: str, status: str) -> dict:
+        """Update status for a single skill.
+
+        If the skill shares a snapshot row with others, it is extracted into
+        its own row so the sibling skills are not affected.
+        """
+        valid = {"active", "completed", "paused"}
+        if status not in valid:
+            raise HTTPException(status_code=400, detail=f"status must be one of {valid}")
+
+        # Find the latest snapshot row containing this skill
+        rows = (
+            supabase.table("user_skills")
+            .select("id, skills, status, created_at")
+            .eq("user_id", user_id)
+            .not_.is_("skills", "null")
+            .order("created_at", desc=True)
+            .execute()
+        ).data or []
+
+        target_row = next(
+            (r for r in rows if r.get("skills") and skill in r["skills"]), None
+        )
+        if target_row is None:
+            raise HTTPException(status_code=404, detail=f"Skill '{skill}' not found")
+
+        siblings = [s for s in target_row["skills"] if s != skill]
+
+        if siblings:
+            # Remove this skill from the shared row (siblings keep their status)
+            supabase.table("user_skills").update({"skills": siblings}).eq("id", target_row["id"]).execute()
+            # Insert a new individual row for this skill with the new status
+            supabase.table("user_skills").insert({
+                "user_id": user_id,
+                "skills": [skill],
+                "status": status,
+                "created_at": target_row["created_at"],   # preserve original date
+            }).execute()
+        else:
+            # Already alone in its row — just update status in-place
+            supabase.table("user_skills").update({"status": status}).eq("id", target_row["id"]).execute()
+
+        return {"msg": "Status updated", "skill": skill, "status": status}
+
+
+# ── Language ──────────────────────────────────────────────────────────────────
+
+class LanguageService:
+    @staticmethod
+    def save(user_id: str, language: str) -> dict:
+        """Append a language-change row to user_skills and sync users.language."""
+        # Get latest skills to include in the snapshot
+        latest = supabase.table("user_skills").select("skills").eq("user_id", user_id).not_.is_("skills", "null").order("created_at", desc=True).limit(1).execute()
+        skills = latest.data[0]["skills"] if latest.data else []
+
+        supabase.table("user_skills").insert({
+            "user_id": user_id,
+            "skills": skills,
+            "language": language,
+            "status": "active",
+        }).execute()
+        supabase.table("users").update({"language": language}).eq("id", user_id).execute()
+        return {"msg": "Language saved", "language": language}
+
+    @staticmethod
+    def get_history(user_id: str) -> list:
+        """Return all language-change rows for the user, filtering out duplicates."""
+        result = (
+            supabase.table("user_skills")
+            .select("id, language, created_at")
+            .eq("user_id", user_id)
+            .not_.is_("language", "null")
+            .order("created_at")
+            .execute()
+        )
+        rows = result.data or []
+        # Filter out rows where language is identical to the previous row
+        filtered = []
+        prev_lang = None
+        for r in rows:
+            curr_lang = r.get("language")
+            if curr_lang != prev_lang:
+                filtered.append(r)
+                prev_lang = curr_lang
+        return filtered
+
+
+# ── Rooms ────────────────────────────────────────────────────────────────────
+
+class RoomService:
+    CATEGORIES = [
+        "Programming", "Web Development", "Backend & APIs", "AI & Machine Learning",
+        "Crafts & Fashion", "Agriculture", "Music & Arts", "Trade Skills",
+        "Health & Wellness", "Science", "Business", "Sports", "Language Learning",
+        "Design", "Other"
+    ]
+
+    @staticmethod
+    def _categorise(skill: str) -> str:
+        """Ask Gemini to assign a single category to a skill."""
+        try:
+            cats = ", ".join(RoomService.CATEGORIES)
+            model = genai.GenerativeModel(MODEL_NAME)
+            resp = model.generate_content(
+                f"Which single category best describes the skill '{skill}'?\n"
+                f"Categories: {cats}\n"
+                f"Reply with ONLY the category name, nothing else."
+            )
+            answer = resp.text.strip().strip('"').strip("'")
+            # Validate — if Gemini hallucinates, fall back to Other
+            return answer if answer in RoomService.CATEGORIES else "Other"
+        except Exception:
+            return "Other"
+
+    @staticmethod
+    def ensure_room(skill: str) -> dict:
+        """Create a room for `skill` if one doesn't exist yet."""
+        key = skill.lower().strip()
+        existing = supabase.table("rooms").select("id, skill, category").eq("skill", key).execute()
+        if existing.data:
+            return existing.data[0]
+        category = RoomService._categorise(skill)
+        description = f"Community chat room for {skill}"
+        result = supabase.table("rooms").insert({
+            "skill": key,
+            "category": category,
+            "description": description,
+        }).execute()
+        return result.data[0] if result.data else {}
+
+    @staticmethod
+    def list_rooms() -> list:
+        """Return all rooms ordered by category then skill name."""
+        result = supabase.table("rooms").select("*").order("category").order("skill").execute()
+        return result.data or []
+
+    @staticmethod
+    def get_messages(room_id: int, limit: int = 50) -> list:
+        result = (
+            supabase.table("room_messages")
+            .select("*")
+            .eq("room_id", room_id)
+            .order("created_at", desc=False)
+            .limit(limit)
+            .execute()
+        )
+        return result.data or []
+
+    @staticmethod
+    def post_message(room_id: int, user_id: str, username: str, content: str) -> dict:
+        result = supabase.table("room_messages").insert({
+            "room_id": room_id,
+            "user_id": user_id,
+            "username": username,
+            "content": content,
+        }).execute()
+        return result.data[0] if result.data else {}
 
 
 # ── Roadmap ───────────────────────────────────────────────────────────────────
@@ -266,6 +464,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 @app.put("/users/{user_id}/onboarding", summary="Save location, language")
 def update_onboarding(user_id: str, data: OnboardingUpdate):
+    # Update location fields on users table
     result = supabase.table("users").update({
         "language": data.language,
         "skills": data.skills,
@@ -278,6 +477,13 @@ def update_onboarding(user_id: str, data: OnboardingUpdate):
 
     if not result.data:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Also write to history tables
+    if data.language:
+        LanguageService.save(user_id, data.language)
+    if data.skills:
+        SkillService.save(user_id, data.skills)
+
     return {"msg": "Onboarding saved"}
 
 
@@ -291,9 +497,21 @@ def suggest_skills(user_id: str, req: SkillSuggestRequest):
 
 
 @app.put("/users/{user_id}/skills",
-         summary="Save confirmed skills to user profile")
+         summary="Save confirmed skills to user_skills table")
 def save_skills(user_id: str, req: SkillsSaveRequest):
     return SkillService.save(user_id, req.skills)
+
+
+@app.get("/users/{user_id}/skills",
+         summary="Get skill history with status and timestamps")
+def get_skill_history(user_id: str):
+    return SkillService.get_history(user_id)
+
+
+@app.patch("/users/{user_id}/skills/{skill}",
+           summary="Update status of a skill (active | completed | paused)")
+def update_skill_status(user_id: str, skill: str, req: SkillStatusUpdate):
+    return SkillService.update_status(user_id, skill, req.status)
 
 
 # ── Roadmap ───────────────────────────────────────────────────────────────────
@@ -356,6 +574,14 @@ def get_resources(user_id: str, type: Optional[str] = None):
     return ResourceService.get(user_id, type)
 
 
+# ── Languages ─────────────────────────────────────────────────────────────────
+
+@app.get("/users/{user_id}/languages",
+         summary="Get language history with timestamps")
+def get_language_history(user_id: str):
+    return LanguageService.get_history(user_id)
+
+
 # ── Certificate ───────────────────────────────────────────────────────────────
 
 @app.post("/certificate/{user_id}",
@@ -382,3 +608,22 @@ def certificate_endpoint(user_id: str):
 
     return {"msg": "Certificate generated", "url": public_url}
 
+
+# ── Rooms ────────────────────────────────────────────────────────────────────
+
+@app.get("/rooms", summary="List all skill chat rooms")
+def list_rooms():
+    return RoomService.list_rooms()
+
+@app.get("/rooms/{room_id}/messages", summary="Get message history for a room")
+def get_room_messages(room_id: int, limit: int = 50):
+    return RoomService.get_messages(room_id, limit)
+
+@app.post("/rooms/{room_id}/messages", summary="Post a message to a room")
+def post_room_message(room_id: int, user_id: str, req: RoomMessageRequest):
+    return RoomService.post_message(room_id, user_id, req.username, req.content)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -1,4 +1,6 @@
-const API_BASE_URL = 'http://localhost:8000'; // Your FastAPI server URL
+const API_BASE_URL = 'http://localhost:8000';
+
+// ── Types ──────────────────────────────────────────────────────────────────────
 
 interface SignupData {
   firstName: string;
@@ -25,8 +27,54 @@ interface OnboardingData {
   country: string;
 }
 
-// ── Session helpers ────────────────────────────────────────────
-// JWT + userId are stored in localStorage after login/signup.
+export interface ChatMessage {
+  id: number;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+}
+
+export interface Resource {
+  id: number;
+  type: 'youtube' | 'article' | 'certificate';
+  topic: string;
+  data: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface Roadmap {
+  id: number;
+  skill: string;
+  roadmap: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface ProfileItem {
+  id: number;
+  skills: string[] | null;        // skill snapshot array (null for language rows)
+  language: string | null;        // language name (null for skill rows)
+  status: 'active' | 'completed' | 'paused' | null;  // null for language rows
+  created_at: string;
+}
+
+export interface Room {
+  id: number;
+  skill: string;
+  category: string;
+  description: string;
+  created_at: string;
+}
+
+export interface RoomMessage {
+  id: number;
+  room_id: number;
+  user_id: string;
+  username: string;
+  content: string;
+  created_at: string;
+}
+
+// ── Session helpers ────────────────────────────────────────────────────────────
 
 export const getStoredToken = (): string | null => localStorage.getItem('accessToken');
 export const getStoredUserId = (): string | null => localStorage.getItem('userId');
@@ -46,13 +94,25 @@ const authHeaders = (): Record<string, string> => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-// --- SIGNUP ---
+const jsonHeaders = (): Record<string, string> => ({
+  'Content-Type': 'application/json',
+  ...authHeaders(),
+});
+
+async function handleResponse<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { detail?: string }).detail || `HTTP ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+// ── Auth ───────────────────────────────────────────────────────────────────────
+
 export const signup = async (data: SignupData) => {
-  const response = await fetch(`${API_BASE_URL}/users/`, {
+  const res = await fetch(`${API_BASE_URL}/users/`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: jsonHeaders(),
     body: JSON.stringify({
       first_name: data.firstName,
       last_name: data.lastName,
@@ -60,227 +120,229 @@ export const signup = async (data: SignupData) => {
       phone_number: data.phone,
       password: data.password,
       terms_and_conditions: data.agreeToTerms,
-      street_address: '',
-      city: '',
-      state: '',
-      zip_code: '',
-      country: '',
-      language: '',
-      skills: [],
+      street_address: '', city: '', state: '', zip_code: '', country: '',
+      language: '', skills: [],
     }),
   });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Signup failed');
-  }
-
-  return response.json();
+  return handleResponse<{ id: string; access_token: string | null }>(res);
 };
 
-// --- LOGIN ---
 export const login = async (data: LoginData) => {
-  const formData = new URLSearchParams();
-  formData.append('username', data.email);
-  formData.append('password', data.password);
+  const body = new URLSearchParams();
+  body.append('username', data.email);
+  body.append('password', data.password);
 
-  const response = await fetch(`${API_BASE_URL}/login`, {
+  const res = await fetch(`${API_BASE_URL}/login`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: formData,
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
   });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Login failed');
-  }
-
-  const result = await response.json();
-
-  // Persist JWT + userId for the session
-  if (result.user_id && result.access_token) {
-    storeSession(result.user_id, result.access_token);
-  }
-
+  const result = await handleResponse<{ user_id: string; access_token: string }>(res);
+  if (result.user_id && result.access_token) storeSession(result.user_id, result.access_token);
   return result;
 };
 
-// --- ONBOARDING UPDATE ---
+// ── User ───────────────────────────────────────────────────────────────────────
+
+export const getUser = async (userId: string) => {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}`, { headers: authHeaders() });
+  return handleResponse<Record<string, unknown>>(res);
+};
+
+// ── Onboarding ─────────────────────────────────────────────────────────────────
+
 export const updateOnboarding = async (userId: string, data: OnboardingData) => {
-  const response = await fetch(`${API_BASE_URL}/users/${userId}/onboarding`, {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/onboarding`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: jsonHeaders(),
     body: JSON.stringify(data),
   });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Failed to update onboarding info');
-  }
-
-  return response.json();
+  return handleResponse<{ msg: string }>(res);
 };
 
-export const generateCurriculum = async (userId: string) => {
-  const response = await fetch(`${API_BASE_URL}/curriculum/${userId}/generate`, {
+// ── Skills ─────────────────────────────────────────────────────────────────────
+
+/** AI suggests skills from a free-text interest — nothing saved yet */
+export const suggestSkills = async (userId: string, interest: string) => {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/skills/suggest`, {
     method: 'POST',
+    headers: jsonHeaders(),
+    body: JSON.stringify({ interest }),
   });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Failed to generate curriculum');
-  }
-
-  return response.json();
+  return handleResponse<{ skills: string[] }>(res);
 };
 
+/** Persist the confirmed skill list to the user profile */
+export const saveSkills = async (userId: string, skills: string[]) => {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/skills`, {
+    method: 'PUT',
+    headers: jsonHeaders(),
+    body: JSON.stringify({ skills }),
+  });
+  return handleResponse<{ msg: string; skills: string[] }>(res);
+};
 
-export const generateContentForSkill = async (userId: string, skill: string) => {
-  const response = await fetch(`${API_BASE_URL}/curriculum/${userId}/${encodeURIComponent(skill)}/content`, {
+// ── Roadmap ────────────────────────────────────────────────────────────────────
+
+/** Generate + save a learning roadmap for a skill */
+export const generateRoadmap = async (userId: string, skill: string) => {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/roadmap`, {
     method: 'POST',
+    headers: jsonHeaders(),
+    body: JSON.stringify({ skill }),
   });
+  return handleResponse<{ skill: string; roadmap: Record<string, unknown> }>(res);
+};
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Failed to generate content for skill');
-  }
+/** Get all saved roadmaps for the user */
+export const getRoadmaps = async (userId: string) => {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/roadmap`, { headers: authHeaders() });
+  return handleResponse<Roadmap[]>(res);
+};
 
-  return response.json();
+/** Get the latest saved roadmap for a specific skill */
+export const getRoadmapBySkill = async (userId: string, skill: string) => {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/roadmap/${encodeURIComponent(skill)}`,
+    { headers: authHeaders() });
+  return handleResponse<Roadmap>(res);
+};
+
+// ── Chat ───────────────────────────────────────────────────────────────────────
+
+/** Send a message — user turn + AI reply both persisted; returns AI response */
+export const sendMessage = async (userId: string, message: string) => {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/chat`, {
+    method: 'POST',
+    headers: jsonHeaders(),
+    body: JSON.stringify({ message }),
+  });
+  return handleResponse<{ response: string }>(res);
+};
+
+/** Fetch full conversation history — [{role, content, created_at}] */
+export const getChatHistory = async (userId: string) => {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/chat`, { headers: authHeaders() });
+  return handleResponse<ChatMessage[]>(res);
+};
+
+// ── Resources ──────────────────────────────────────────────────────────────────
+
+/** Fetch YouTube videos for a topic + save to DB */
+export const getYouTubeResources = async (userId: string, topic: string) => {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/resources/youtube`, {
+    method: 'POST',
+    headers: jsonHeaders(),
+    body: JSON.stringify({ topic }),
+  });
+  return handleResponse<Record<string, unknown>>(res);
+};
+
+/** Fetch article links for a topic + save to DB */
+export const getArticleResources = async (userId: string, topic: string) => {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/resources/articles`, {
+    method: 'POST',
+    headers: jsonHeaders(),
+    body: JSON.stringify({ topic }),
+  });
+  return handleResponse<Record<string, unknown>>(res);
+};
+
+/** Get all saved resources, optionally filtered by type */
+export const getResources = async (userId: string, type?: 'youtube' | 'article' | 'certificate') => {
+  const url = type
+    ? `${API_BASE_URL}/users/${userId}/resources?type=${type}`
+    : `${API_BASE_URL}/users/${userId}/resources`;
+  const res = await fetch(url, { headers: authHeaders() });
+  return handleResponse<Resource[]>(res);
+};
+
+// ── Certificate ────────────────────────────────────────────────────────────────
+
+export const generateCertificate = async (userId: string) => {
+  const res = await fetch(`${API_BASE_URL}/certificate/${userId}`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  return handleResponse<{ msg: string; url: string }>(res);
 };
 
 
-export const getCurriculum = async (userId: string) => {
-  const response = await fetch(`${API_BASE_URL}/curriculum/${userId}`, {
-    method: 'GET',
+// ── Skill history ─────────────────────────────────────────────────────────────────
+
+/** GET /users/{id}/skills — all skill rows from user_profile_items */
+export const getSkillHistory = async (userId: string) => {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/skills`, {
+    headers: authHeaders(),
   });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Failed to fetch curriculum');
-  }
-
-  return response.json();
+  // backend returns {id, skills: string[], status, created_at}
+  const data = await handleResponse<Array<{ id: number; skills: string[]; status: string; created_at: string }>>(res);
+  return data.map(r => ({ ...r, language: null })) as ProfileItem[];
 };
 
-
-
-export const markSubtopicComplete = async (
+/** PATCH /users/{id}/skills/{skill} — update status: active | completed | paused */
+export const updateSkillStatus = async (
   userId: string,
   skill: string,
-  topic: string,
-  subtopic: string
+  status: 'active' | 'completed' | 'paused',
 ) => {
-  const response = await fetch(
-    `${API_BASE_URL}/curriculum/${userId}/${encodeURIComponent(skill)}/${encodeURIComponent(topic)}/${encodeURIComponent(subtopic)}/progress`,
+  const res = await fetch(
+    `${API_BASE_URL}/users/${userId}/skills/${encodeURIComponent(skill)}`,
     {
       method: 'PATCH',
-    }
+      headers: jsonHeaders(),
+      body: JSON.stringify({ status }),
+    },
   );
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Failed to update subtopic progress');
-  }
-
-  return response.json();
+  return handleResponse<{ msg: string; skill: string; status: string }>(res);
 };
 
-// --- USER ---
-export const getUser = async (userId: string) => {
-  const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
-    method: 'GET',
-    headers: {
-      ...authHeaders(),
-    },
+
+// ── Language history ──────────────────────────────────────────────────────────────
+
+/** GET /users/{id}/languages — all language rows from user_skills */
+export const getLanguageHistory = async (userId: string) => {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/languages`, {
+    headers: authHeaders(),
   });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Failed to fetch user');
-  }
-
-  return response.json();
+  // backend returns {id, language, created_at}
+  const data = await handleResponse<Array<{ id: number; language: string; created_at: string }>>(res);
+  return data.map(r => ({ ...r, skills: null, status: null })) as ProfileItem[];
 };
 
-// --- PROMPTS ---
-export const getPrompts = async (userId: string) => {
-  const response = await fetch(`${API_BASE_URL}/prompts/${userId}`, {
-    method: 'GET',
-  });
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Failed to fetch prompts');
-  }
+// ── All profile items ────────────────────────────────────────────────────────────────
 
-  return response.json();
+/** Fetch both skills and languages together, sorted by created_at */
+export const getProfileItems = async (userId: string): Promise<ProfileItem[]> => {
+  const [skills, languages] = await Promise.all([
+    getSkillHistory(userId),
+    getLanguageHistory(userId),
+  ]);
+  return [...skills, ...languages].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
 };
 
-export const addPrompt = async (userId: string, prompt: string) => {
-  // Backend expects prompt as query parameter
-  const response = await fetch(`${API_BASE_URL}/prompts/${userId}?prompt=${encodeURIComponent(prompt)}`, {
+// ── Rooms ────────────────────────────────────────────────────────────────────
+
+/** Get all skill chat rooms */
+export const getRooms = async () => {
+  const res = await fetch(`${API_BASE_URL}/rooms`, { headers: authHeaders() });
+  return handleResponse<Room[]>(res);
+};
+
+/** Get message history for a room */
+export const getRoomMessages = async (roomId: number, limit: number = 50) => {
+  const res = await fetch(`${API_BASE_URL}/rooms/${roomId}/messages?limit=${limit}`, { headers: authHeaders() });
+  return handleResponse<RoomMessage[]>(res);
+};
+
+/** Post a message to a room */
+export const sendRoomMessage = async (roomId: number, userId: string, username: string, content: string) => {
+  const res = await fetch(`${API_BASE_URL}/rooms/${roomId}/messages?user_id=${userId}`, {
     method: 'POST',
+    headers: jsonHeaders(),
+    body: JSON.stringify({ username, content }),
   });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Failed to add prompt');
-  }
-
-  return response.json();
-};
-
-// --- AI / CHAT ---
-export const sendPromptToAI = async (userId: string, prompt: string) => {
-  // Use dedicated chat endpoint
-  const response = await fetch(`${API_BASE_URL}/api/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Failed to get AI response');
-  }
-
-  return response.json();
-};
-
-export const suggestSkills = async (prompt: string) => {
-  const response = await fetch(`${API_BASE_URL}/api/suggest_skills`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ prompt }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Failed to suggest skills');
-  }
-
-  return response.json();
-};
-
-export const generateLearningPath = async (prompt: string) => {
-  const response = await fetch(`${API_BASE_URL}/api/generate_content`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ prompt }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Failed to generate learning path');
-  }
-
-  return response.json();
+  return handleResponse<RoomMessage>(res);
 };
