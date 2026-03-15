@@ -156,7 +156,13 @@ export const Reference: React.FC<ReferenceProps> = ({ isExpanded, onToggle, prom
                         <X className="w-4 h-4" />
                       </button>
                       <iframe
-                        src={reference.url}
+                        src={
+                          reference.url.includes('youtube.com/watch?v=')
+                            ? reference.url.replace('youtube.com/watch?v=', 'youtube.com/embed/')
+                            : reference.url.includes('youtu.be/')
+                            ? reference.url.replace('youtu.be/', 'youtube.com/embed/')
+                            : reference.url
+                        }
                         className="w-full h-64"
                         title={reference.title}
                         frameBorder="0"

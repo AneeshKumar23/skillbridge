@@ -75,3 +75,11 @@ class RoomMessageRequest(BaseModel):
     """Body for POST /rooms/{room_id}/messages."""
     username: str
     content: str
+
+
+# ── Questions ─────────────────────────────────────────────────────────────────
+
+class QuestionRequest(BaseModel):
+    """Body for POST /users/{id}/questions."""
+    topic: str
+    num_questions: Optional[int] = 5

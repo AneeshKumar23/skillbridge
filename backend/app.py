@@ -443,6 +443,90 @@ class ResourceService:
         return q.execute().data or []
 
 
+# ── Questions ─────────────────────────────────────────────────────────────────
+
+class QuestionService:
+    @staticmethod
+    def generate_questions(user_id: str, topic: str, num_questions: int) -> dict:
+        # 1. Embed the topic
+        try:
+            topic_embed_resp = genai.embed_content(
+                model="models/gemini-embedding-001", 
+                content=topic
+            )
+            topic_embedding = topic_embed_resp['embedding']
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to embed topic: {e}")
+
+        # 2. Fetch past chat messages/materials for the user to find context
+        # We fetch the user's latest 100 messages that have embeddings
+        result = (
+            supabase.table("user_chat_messages")
+            .select("content, embedding")
+            .eq("user_id", user_id)
+            .not_.is_("embedding", "null")
+            .order("created_at", desc=True)
+            .limit(100)
+            .execute()
+        )
+        
+        # 3. Compute similarity and pick top K
+        import math
+        
+        def cosine_similarity(v1, v2):
+            if not v1 or not v2 or len(v1) != len(v2):
+                return 0.0
+            dot = sum(a*b for a, b in zip(v1, v2))
+            norm1 = math.sqrt(sum(a*a for a in v1))
+            norm2 = math.sqrt(sum(b*b for b in v2))
+            return dot / (norm1 * norm2) if norm1 and norm2 else 0.0
+
+        scored_msgs = []
+        for row in result.data or []:
+            emb = row.get("embedding")
+            if emb:
+                # Some JSON arrays might be returned as strings depending on postgres/pgvector/supabase version
+                if isinstance(emb, str):
+                    try:
+                        emb = json.loads(emb)
+                    except:
+                        continue
+                score = cosine_similarity(topic_embedding, emb)
+                scored_msgs.append((score, row["content"]))
+                
+        # Sort by similarity desc
+        scored_msgs.sort(key=lambda x: x[0], reverse=True)
+        top_k = [msg for score, msg in scored_msgs[:5]]
+
+        context_text = "\n\n".join(top_k) if top_k else "No specific embedded context found."
+
+        # 4. Generate questions using Gemma
+        prompt = f"""
+You are an educational assistant.
+Based on the following extracted context materials from the user's history about the topic "{topic}",
+generate {num_questions} multiple-choice questions that test the user's understanding of the materials.
+
+Context Materials:
+{context_text}
+
+Generate ONLY a JSON array of objects with the following format, with no extra markdown or text:
+[
+  {{
+    "question": "...",
+    "options": ["...", "...", "...", "..."],
+    "answer": "..."
+  }}
+]
+"""
+        try:
+            model = genai.GenerativeModel(MODEL_NAME)
+            response = model.generate_content(prompt)
+            data = _parse_gemini_json(response.text)
+            return {"topic": topic, "questions": data}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to generate questions: {e}")
+
+
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║  ROUTES                                                                     ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
@@ -643,6 +727,13 @@ def get_room_messages(room_id: int, limit: int = 50):
 @app.post("/rooms/{room_id}/messages", summary="Post a message to a room")
 def post_room_message(room_id: int, user_id: str, req: RoomMessageRequest):
     return RoomService.post_message(room_id, user_id, req.username, req.content)
+
+
+# ── Questions ─────────────────────────────────────────────────────────────────
+
+@app.post("/users/{user_id}/questions", summary="Generate questions using semantic search on embeddings")
+def generate_questions(user_id: str, req: QuestionRequest):
+    return QuestionService.generate_questions(user_id, req.topic, req.num_questions)
 
 
 if __name__ == "__main__":
