@@ -65,6 +65,12 @@ export interface Room {
   created_at: string;
 }
 
+export interface Question {
+  question: string;
+  options: string[];
+  answer: string;
+}
+
 export interface RoomMessage {
   id: number;
   room_id: number;
@@ -207,6 +213,15 @@ export const getRoadmapBySkill = async (userId: string, skill: string) => {
   return handleResponse<Roadmap>(res);
 };
 
+export const updateRoadmap = async (userId: string, skill: string, roadmap: Record<string, unknown>) => {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/roadmap/${encodeURIComponent(skill)}`, {
+    method: 'PATCH',
+    headers: jsonHeaders(),
+    body: JSON.stringify({ roadmap }),
+  });
+  return handleResponse<{ skill: string; roadmap: Record<string, unknown> }>(res);
+};
+
 // ── Chat ───────────────────────────────────────────────────────────────────────
 
 /** Send a message — user turn + AI reply both persisted; returns AI response */
@@ -345,4 +360,13 @@ export const sendRoomMessage = async (roomId: number, userId: string, username: 
     body: JSON.stringify({ username, content }),
   });
   return handleResponse<RoomMessage>(res);
+};
+
+export const getQuestions = async (userId: string, topic: string, numQuestions: number, language: string) => {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/questions`, {
+    method: 'POST',
+    headers: jsonHeaders(),
+    body: JSON.stringify({ topic, num_questions: numQuestions, language }),
+  });
+  return handleResponse<{ topic: string, questions: Question[] }>(res);
 };

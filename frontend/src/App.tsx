@@ -10,6 +10,7 @@ import Onboarding from "./pages/Onboarding";
 import { Chat } from "./pages/Chat";
 import NotFound from "./pages/NotFound";
 import Contact from "../src/components/landing/Contact";
+import Quiz from "./pages/Quiz";
 const queryClient = new QueryClient();
 
 import { UserProvider } from "./context/UserContext";
@@ -31,6 +32,7 @@ const App = () => (
               <Route path="/signup" element={<Signup />} />
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/chat" element={<Chat />} />
+              <Route path="/quiz" element={<Quiz />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

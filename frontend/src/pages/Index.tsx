@@ -1,5 +1,6 @@
 
 import { ArrowRight, Play, Smartphone, Globe, Brain, Award, Users, Download, BookOpen, CheckCircle, Star, MessageCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Navigation from "@/components/Navigation";
@@ -7,6 +8,7 @@ import TabletVideo from "@/components/TabletVideo";
 import Footer from "@/components/Footer";
 
 const Index = () => {
+  const navigate = useNavigate();
   const languages = [
     { name: "Hindi", flag: "🇮🇳", code: "hi" },
     { name: "Tamil", flag: "🌴", code: "ta" },
@@ -113,9 +115,16 @@ const Index = () => {
               personalized, offline-first, and built for Bharat.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button className="bg-black text-white hover:bg-gray-800 px-8 py-3 text-lg">
+              <Button className="bg-black text-white hover:bg-gray-800 px-8 py-3 text-lg" onClick={() => navigate('/onboarding')}>
                 Get Started
                 <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+              <Button 
+                className="bg-blue-500 text-white hover:bg-blue-600 px-8 py-3 text-lg shadow-lg transform transition hover:scale-105"
+                onClick={() => navigate('/quiz')}
+              >
+                Take Test
+                <Award className="ml-2 h-5 w-5" />
               </Button>
               <Button 
                 variant="outline" 

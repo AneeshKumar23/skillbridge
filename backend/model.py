@@ -56,6 +56,10 @@ class RoadmapRequest(BaseModel):
     """Body for POST /users/{id}/roadmap."""
     skill: str
 
+class RoadmapUpdateRequest(BaseModel):
+    """Body for PATCH /users/{id}/roadmap/{skill}."""
+    roadmap: dict
+
 
 # ── Chat ──────────────────────────────────────────────────────────────────────
 
@@ -82,4 +86,5 @@ class RoomMessageRequest(BaseModel):
 class QuestionRequest(BaseModel):
     """Body for POST /users/{id}/questions."""
     topic: str
-    num_questions: Optional[int] = 5
+    num_questions: Optional[int] = 10
+    language: Optional[str] = "English"

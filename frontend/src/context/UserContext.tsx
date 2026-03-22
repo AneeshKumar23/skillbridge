@@ -7,6 +7,7 @@ interface User {
     last_name: string;
     email: string;
     skills: string[];
+    language: string;
 }
 
 interface UserContextType {
@@ -34,7 +35,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const fetchUser = async (userId: string) => {
         try {
             const userData = await getUser(userId);
-            setUser(userData);
+            setUser(userData as unknown as User);
         } catch (error) {
             console.error('Failed to restore user session:', error);
             clearSession();

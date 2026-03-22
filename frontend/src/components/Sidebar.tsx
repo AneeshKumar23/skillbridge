@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Award, Settings, BookOpen, User, Search, MoreHorizontal, ChevronLeft, ChevronRight, CheckCircle2, Clock, PauseCircle, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { getSkillHistory, updateSkillStatus, ProfileItem } from '../../api/db';
 import { SuggestSkillsModal } from './SuggestSkillsModal';
 
@@ -49,6 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   user,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
   const [skillHistory, setSkillHistory] = useState<ProfileItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestModal, setShowSuggestModal] = useState(false);
@@ -157,13 +159,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Award className="w-5 h-5" />
           </button>
 
-          {/* Communities */}
           <button
             onClick={() => onNavigate('communities')}
             className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
             title="Communities"
           >
             <Users className="w-5 h-5" />
+          </button>
+
+          {/* Take Test */}
+          <button
+            onClick={() => navigate('/quiz')}
+            className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+            title="Take Test"
+          >
+            <CheckCircle2 className="w-5 h-5" />
           </button>
 
           {/* Settings */}
@@ -266,6 +276,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div>
                 <h4 className="font-medium text-blue-900 dark:text-blue-200 text-sm">Communities</h4>
                 <p className="text-xs text-blue-700 dark:text-blue-400">Connect with learners</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Take Test Card */}
+        <div className="px-4 pb-3">
+          <div
+            className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-xl p-3 cursor-pointer hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-900/30 dark:hover:to-emerald-900/30 transition-colors"
+            onClick={() => navigate('/quiz')}
+          >
+            <div className="flex items-center space-x-2">
+              <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
+              <div>
+                <h4 className="font-medium text-green-900 dark:text-green-200 text-sm">Take Test</h4>
+                <p className="text-xs text-green-700 dark:text-green-400">Assess your skills</p>
               </div>
             </div>
           </div>

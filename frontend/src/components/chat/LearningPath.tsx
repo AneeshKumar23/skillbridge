@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, CheckCircle, Circle, Target, BookOpen, Clock, Award, RefreshCw } from 'lucide-react';
-import { generateRoadmap, getRoadmapBySkill, getStoredUserId } from '../../../api/db';
+import { ChevronDown, ChevronRight, CheckCircle, Circle, Target, BookOpen, Clock, Award, RefreshCw, Send } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { generateRoadmap, getRoadmapBySkill, getStoredUserId, updateRoadmap } from '../../../api/db';
 
 interface LearningNode {
   id: string;
   title: string;
   completed: boolean;
+  testCompleted?: boolean;
   progress?: number;
   duration?: string;
   children?: LearningNode[];
@@ -20,6 +22,7 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
   const [nodes, setNodes] = useState<LearningNode[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (prompt) {
@@ -45,13 +48,19 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
         const newNodes: LearningNode[] = data.milestones.map((m: any, i: number) => ({
           id: `${i}`,
           title: m.main_goal,
-          completed: false,
+          completed: m.completed || false,
+          testCompleted: m.testCompleted || false,
           progress: 0,
-          children: m.sub_goals?.map((sub: string, j: number) => ({
-            id: `${i}.${j}`,
-            title: sub,
-            completed: false
-          }))
+          children: m.sub_goals?.map((sub: any, j: number) => {
+            const isObj = typeof sub === 'object';
+            const title = isObj ? sub.title : sub;
+            return {
+              id: `${i}.${j}`,
+              title,
+              completed: isObj ? sub.completed : false,
+              testCompleted: isObj ? sub.testCompleted : false,
+            };
+          })
         }));
         setNodes(newNodes);
         if (newNodes.length > 0) {
@@ -63,6 +72,50 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
     } finally {
       setLoading(false);
     }
+  };
+
+  const persistRoadmap = async (updatedNodes: LearningNode[]) => {
+    const uid = userId || getStoredUserId() || '';
+    if (!uid || !prompt) return;
+
+    const roadmapData = {
+      milestones: updatedNodes.map(node => ({
+        main_goal: node.title,
+        completed: node.completed,
+        testCompleted: node.testCompleted,
+        sub_goals: node.children?.map(child => ({
+          title: child.title,
+          completed: child.completed,
+          testCompleted: child.testCompleted
+        }))
+      }))
+    };
+
+    try {
+      await updateRoadmap(uid, prompt, roadmapData);
+    } catch (e) {
+      console.error('Failed to persist roadmap', e);
+    }
+  };
+
+  const handleToggleCompletion = (nodeId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setNodes(prevNodes => {
+      const updateNodes = (list: LearningNode[]): LearningNode[] => {
+        return list.map(node => {
+          if (node.id === nodeId) {
+            return { ...node, completed: !node.completed };
+          }
+          if (node.children) {
+            return { ...node, children: updateNodes(node.children) };
+          }
+          return node;
+        });
+      };
+      const result = updateNodes(prevNodes);
+      persistRoadmap(result);
+      return result;
+    });
   };
 
   const toggleNode = (nodeId: string) => {
@@ -101,8 +154,8 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
         {/* Node Container */}
         <div className="flex items-start space-x-4 mb-6">
           {/* Timeline Dot */}
-          <div className="relative flex-shrink-0">
-            <div className={`w-12 h-12 rounded-full border-4 border-white shadow-lg flex items-center justify-center ${node.completed ? 'bg-green-500' : node.progress ? 'bg-blue-500' : 'bg-gray-300'
+          <div className="relative flex-shrink-0 cursor-pointer" onClick={(e) => handleToggleCompletion(node.id, e)}>
+            <div className={`w-12 h-12 rounded-full border-4 border-white shadow-lg flex items-center justify-center transition-colors ${node.completed ? 'bg-green-500' : node.progress ? 'bg-blue-500' : 'bg-gray-300'
               }`}>
               {node.completed ? (
                 <CheckCircle className="w-6 h-6 text-white" />
@@ -163,8 +216,11 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
                       }`}>
                       {node.title}
                     </h4>
-                    {node.completed && (
+                    {node.testCompleted && (
                       <Award className="w-4 h-4 text-yellow-500" />
+                    )}
+                    {node.completed && !node.testCompleted && (
+                      <CheckCircle className="w-4 h-4 text-green-500 opacity-50" />
                     )}
                   </div>
 
@@ -190,6 +246,18 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
                     )}
                   </div>
                 </div>
+                {node.completed && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/quiz?topic=${encodeURIComponent(node.title)}&parent=${encodeURIComponent(prompt || '')}`);
+                    }}
+                    className="mt-4 w-full flex items-center justify-center space-x-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                  >
+                    <Award className="w-4 h-4" />
+                    <span>Take Module Test</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -204,28 +272,45 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
                     )}
 
                     <div className="flex items-start space-x-3">
-                      <div className={`w-12 h-12 rounded-full border-2 border-white shadow flex items-center justify-center ${child.completed ? 'bg-green-100' : 'bg-gray-100'
-                        }`}>
+                      <div 
+                        className={`w-12 h-12 rounded-full border-2 border-white shadow flex items-center justify-center cursor-pointer transition-colors ${child.completed ? 'bg-green-100' : 'bg-gray-100'
+                        }`}
+                        onClick={(e) => handleToggleCompletion(child.id, e)}
+                      >
                         {child.completed ? (
                           <CheckCircle className="w-5 h-5 text-green-500" />
                         ) : (
                           <Circle className="w-5 h-5 text-gray-400" />
                         )}
                       </div>
-
-                      <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 p-3 hover:border-gray-200 dark:hover:border-gray-600 transition-colors">
-                        <div className="flex items-center justify-between">
-                          <h5 className={`text-sm font-medium ${child.completed ? 'text-green-700 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'
-                            }`}>
-                            {child.title}
-                          </h5>
-                          {child.duration && (
-                            <span className="text-xs text-gray-500 flex items-center space-x-1">
-                              <Clock className="w-3 h-3" />
-                              <span>{child.duration}</span>
-                            </span>
-                          )}
+                      
+                      <div className="flex-1 flex flex-col space-y-2">
+                        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 p-3 hover:border-gray-200 dark:hover:border-gray-600 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <h5 className={`text-sm font-medium ${child.completed ? 'text-green-700 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'
+                              }`}>
+                              {child.title}
+                            </h5>
+                            {child.duration && (
+                              <span className="text-xs text-gray-500 flex items-center space-x-1">
+                                <Clock className="w-3 h-3" />
+                                <span>{child.duration}</span>
+                              </span>
+                            )}
+                          </div>
                         </div>
+                        {child.completed && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/quiz?topic=${encodeURIComponent(child.title)}&parent=${encodeURIComponent(prompt || '')}`);
+                            }}
+                            className="flex items-center justify-center space-x-2 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-lg transition-colors text-xs font-medium"
+                          >
+                            <Award className="w-3 h-3" />
+                            <span>Take Sub-module Test</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -239,13 +324,15 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
   };
 
   const completedCount = nodes.reduce((acc, node) => {
-    const nodeCompleted = node.completed ? 1 : 0;
-    const childrenCompleted = node.children?.filter(child => child.completed).length || 0;
-    return acc + nodeCompleted + childrenCompleted;
+    const nodeValue = (node.completed ? 1 : 0) + (node.testCompleted ? 1 : 0);
+    const childrenValue = node.children?.reduce((sum, child) => {
+        return sum + (child.completed ? 1 : 0) + (child.testCompleted ? 1 : 0);
+    }, 0) || 0;
+    return acc + nodeValue + childrenValue;
   }, 0);
 
-  const totalCount = nodes.reduce((acc, node) => {
-    return acc + 1 + (node.children?.length || 0);
+  const totalPoints = nodes.reduce((acc, node) => {
+    return acc + 2 + (node.children?.length || 0) * 2; // 2 points per node (study + test)
   }, 0);
 
   if (loading) {
@@ -286,7 +373,7 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
           </button>
           <div className="h-4 w-px bg-gray-300 mx-1"></div>
           <Target className="w-4 h-4 text-blue-500" />
-          <span className="text-sm text-gray-600">{completedCount}/{totalCount}</span>
+          <span className="text-sm text-gray-600 font-semibold">{completedCount}/{totalPoints} XP</span>
         </div>
       </div>
 
@@ -294,12 +381,12 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
       <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-blue-900 dark:text-blue-300">Overall Progress</span>
-          <span className="text-sm text-blue-700 dark:text-blue-400">{Math.round((completedCount / (totalCount || 1)) * 100)}%</span>
+          <span className="text-sm text-blue-700 dark:text-blue-400">{Math.round((completedCount / (totalPoints || 1)) * 100)}%</span>
         </div>
         <div className="w-full bg-blue-200 rounded-full h-2">
           <div
             className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${(completedCount / (totalCount || 1)) * 100}%` }}
+            style={{ width: `${(completedCount / (totalPoints || 1)) * 100}%` }}
           ></div>
         </div>
       </div>

@@ -9,7 +9,7 @@ import {
   Play,
   X,
 } from 'lucide-react';
-import { getArticleResources, getYouTubeResources, getStoredUserId } from '../../../api/db';
+import { getArticleResources, getYouTubeResources, getResources, getStoredUserId } from '../../../api/db';
 
 interface Reference {
   id: string;
@@ -37,6 +37,50 @@ export const Reference: React.FC<ReferenceProps> = ({ isExpanded, onToggle, prom
 
       const uid = userId || getStoredUserId() || '';
       const newRefs: Reference[] = [];
+
+      try {
+        const cached = await getResources(uid);
+        const filtered = cached.filter(r => r.topic === prompt);
+        
+        if (filtered.length > 0) {
+          const refs: Reference[] = [];
+          filtered.forEach((res, i) => {
+            if (res.type === 'article') {
+              const data = res.data as any;
+              if (data.articles) {
+                data.articles.forEach((art: any, j: number) => {
+                  refs.push({
+                    id: `cached-art-${i}-${j}`,
+                    title: art.title,
+                    type: 'document',
+                    url: art.link,
+                    description: `Read more about ${prompt}`
+                  });
+                });
+              }
+            } else if (res.type === 'youtube') {
+              const data = res.data as any;
+              if (data.materials) {
+                data.materials.forEach((vid: any, j: number) => {
+                  refs.push({
+                    id: `cached-vid-${i}-${j}`,
+                    title: vid.title,
+                    type: 'video',
+                    url: vid.link,
+                    description: vid.title
+                  });
+                });
+              }
+            }
+          });
+          if (refs.length > 0) {
+            setReferences(refs);
+            return; // Use cached
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load cached resources', e);
+      }
 
       try {
         const artData = await getArticleResources(uid, prompt);

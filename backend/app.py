@@ -353,6 +353,11 @@ class RoadmapService:
             raise HTTPException(status_code=404, detail=f"No roadmap found for skill '{skill}'")
         return result.data[0]
 
+    @staticmethod
+    def update(user_id: str, skill: str, roadmap: dict) -> dict:
+        supabase.table("user_roadmaps").update({"roadmap": roadmap}).eq("user_id", user_id).eq("skill", skill).execute()
+        return {"skill": skill, "roadmap": roadmap}
+
 
 # ── Chat ──────────────────────────────────────────────────────────────────────
 
@@ -447,7 +452,17 @@ class ResourceService:
 
 class QuestionService:
     @staticmethod
-    def generate_questions(user_id: str, topic: str, num_questions: int) -> dict:
+    def generate_questions(user_id: str, topic: str, num_questions: int, language: str = "English") -> dict:
+        # mapping for common language codes to full names if needed
+        lang_map = {
+            "en": "English",
+            "hi": "Hindi",
+            "ta": "Tamil",
+            "te": "Telugu",
+            "bn": "Bengali"
+        }
+        full_language = lang_map.get(language.lower(), language)
+
         # 1. Embed the topic
         try:
             topic_embed_resp = genai.embed_content(
@@ -456,57 +471,54 @@ class QuestionService:
             )
             topic_embedding = topic_embed_resp['embedding']
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to embed topic: {e}")
+            print(f"Failed to embed topic: {e}")
+            topic_embedding = None
 
         # 2. Fetch past chat messages/materials for the user to find context
-        # We fetch the user's latest 100 messages that have embeddings
-        result = (
-            supabase.table("user_chat_messages")
-            .select("content, embedding")
-            .eq("user_id", user_id)
-            .not_.is_("embedding", "null")
-            .order("created_at", desc=True)
-            .limit(100)
-            .execute()
-        )
-        
-        # 3. Compute similarity and pick top K
-        import math
-        
-        def cosine_similarity(v1, v2):
-            if not v1 or not v2 or len(v1) != len(v2):
-                return 0.0
-            dot = sum(a*b for a, b in zip(v1, v2))
-            norm1 = math.sqrt(sum(a*a for a in v1))
-            norm2 = math.sqrt(sum(b*b for b in v2))
-            return dot / (norm1 * norm2) if norm1 and norm2 else 0.0
+        context_text = ""
+        if topic_embedding:
+            result = (
+                supabase.table("user_chat_messages")
+                .select("content, embedding")
+                .eq("user_id", user_id)
+                .not_.is_("embedding", "null")
+                .order("created_at", desc=True)
+                .limit(100)
+                .execute()
+            )
+            
+            # 3. Compute similarity and pick top K
+            import math
+            
+            def cosine_similarity(v1, v2):
+                if not v1 or not v2 or len(v1) != len(v2):
+                    return 0.0
+                dot = sum(a*b for a, b in zip(v1, v2))
+                norm1 = math.sqrt(sum(a*a for a in v1))
+                norm2 = math.sqrt(sum(b*b for b in v2))
+                return dot / (norm1 * norm2) if norm1 and norm2 else 0.0
 
-        scored_msgs = []
-        for row in result.data or []:
-            emb = row.get("embedding")
-            if emb:
-                # Some JSON arrays might be returned as strings depending on postgres/pgvector/supabase version
-                if isinstance(emb, str):
-                    try:
-                        emb = json.loads(emb)
-                    except:
-                        continue
-                score = cosine_similarity(topic_embedding, emb)
-                scored_msgs.append((score, row["content"]))
-                
-        # Sort by similarity desc
-        scored_msgs.sort(key=lambda x: x[0], reverse=True)
-        top_k = [msg for score, msg in scored_msgs[:5]]
+            scored_msgs = []
+            for row in result.data or []:
+                emb = row.get("embedding")
+                if emb:
+                    if isinstance(emb, str):
+                        try: emb = json.loads(emb)
+                        except: continue
+                    score = cosine_similarity(topic_embedding, emb)
+                    scored_msgs.append((score, row["content"]))
+                    
+            scored_msgs.sort(key=lambda x: x[0], reverse=True)
+            top_k = [msg for score, msg in scored_msgs[:5]]
+            context_text = "\n\n".join(top_k) if top_k else ""
 
-        context_text = "\n\n".join(top_k) if top_k else "No specific embedded context found."
-
-        # 4. Generate questions using Gemma
+        # 4. Generate questions using Gemini
         prompt = f"""
-You are an educational assistant.
-Based on the following extracted context materials from the user's history about the topic "{topic}",
-generate {num_questions} multiple-choice questions that test the user's understanding of the materials.
+You are an educational assistant. 
+Generate {num_questions} multiple-choice questions about the topic "{topic}".
+The questions, options, and answers MUST be in the {full_language} language.
 
-Context Materials:
+{'Context from user history:' if context_text else ''}
 {context_text}
 
 Generate ONLY a JSON array of objects with the following format, with no extra markdown or text:
@@ -522,7 +534,7 @@ Generate ONLY a JSON array of objects with the following format, with no extra m
             model = genai.GenerativeModel(MODEL_NAME)
             response = model.generate_content(prompt)
             data = _parse_gemini_json(response.text)
-            return {"topic": topic, "questions": data}
+            return {"topic": topic, "questions": data[:num_questions]}
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to generate questions: {e}")
 
@@ -639,6 +651,12 @@ def get_roadmap_by_skill(user_id: str, skill: str):
     return RoadmapService.get_by_skill(user_id, skill)
 
 
+@app.patch("/users/{user_id}/roadmap/{skill}",
+           summary="Update a saved roadmap JSON")
+def update_roadmap(user_id: str, skill: str, req: RoadmapUpdateRequest):
+    return RoadmapService.update(user_id, skill, req.roadmap)
+
+
 # ── Chat ──────────────────────────────────────────────────────────────────────
 
 @app.post("/users/{user_id}/chat",
@@ -733,7 +751,7 @@ def post_room_message(room_id: int, user_id: str, req: RoomMessageRequest):
 
 @app.post("/users/{user_id}/questions", summary="Generate questions using semantic search on embeddings")
 def generate_questions(user_id: str, req: QuestionRequest):
-    return QuestionService.generate_questions(user_id, req.topic, req.num_questions)
+    return QuestionService.generate_questions(user_id, req.topic, req.num_questions, req.language)
 
 
 if __name__ == "__main__":
