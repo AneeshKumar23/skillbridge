@@ -112,14 +112,14 @@ export const Communities: React.FC<CommunitiesProps> = ({ onBack }) => {
 
     if (loadingRooms) {
         return (
-            <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+            <div className="h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-gray-950">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
         );
     }
 
     return (
-        <div className="flex-1 flex overflow-hidden bg-white dark:bg-gray-950">
+        <div className="h-screen w-full flex overflow-hidden bg-white dark:bg-gray-950">
             {/* Rooms Sidebar (Discord style) */}
             <div className="w-64 bg-gray-100 dark:bg-gray-900 flex flex-col border-r border-gray-200 dark:border-gray-800">
                 <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center gap-3 shrink-0">
@@ -256,7 +256,7 @@ export const Communities: React.FC<CommunitiesProps> = ({ onBack }) => {
                                     value={newMessage}
                                     onChange={e => setNewMessage(e.target.value)}
                                     placeholder={`Message #${selectedRoom.skill}`}
-                                    className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-1.5 text-gray-900 dark:text-gray-100 placeholder-gray-500"
+                                    className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-sm py-1.5 px-2 text-gray-900 dark:text-gray-100 placeholder-gray-500"
                                     disabled={sending}
                                 />
                                 <button
