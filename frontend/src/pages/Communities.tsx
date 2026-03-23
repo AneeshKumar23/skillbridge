@@ -9,6 +9,7 @@ import {
 } from '../../api/db';
 import { useUser } from '../context/UserContext';
 import { format } from 'date-fns';
+import { supabase } from '../lib/supabase';
 
 interface CommunitiesProps {
     onBack: () => void;
@@ -57,7 +58,7 @@ export const Communities: React.FC<CommunitiesProps> = ({ onBack }) => {
         fetchData();
     }, [user?.id]);
 
-    // Poll for messages when a room is selected
+    // Fetch messages and set up Realtime subscription when a room is selected
     useEffect(() => {
         if (!selectedRoom) return;
 
@@ -71,8 +72,32 @@ export const Communities: React.FC<CommunitiesProps> = ({ onBack }) => {
         };
 
         fetchMessages();
-        const interval = setInterval(fetchMessages, 3000); // Poll every 3s
-        return () => clearInterval(interval);
+
+        // Single Realtime channel per client for the active room
+        const channel = supabase
+            .channel(`room_${selectedRoom.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'room_messages',
+                    filter: `room_id=eq.${selectedRoom.id}`
+                },
+                (payload) => {
+                    const newMsg = payload.new as RoomMessage;
+                    setMessages(prev => {
+                        // Prevent duplicates if already added via sendRoomMessage
+                        if (prev.some(m => m.id === newMsg.id)) return prev;
+                        return [...prev, newMsg];
+                    });
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [selectedRoom?.id]);
 
     // Scroll to bottom when messages change
@@ -87,11 +112,15 @@ export const Communities: React.FC<CommunitiesProps> = ({ onBack }) => {
         setSending(true);
         try {
             const username = `${user.first_name} ${user.last_name}`;
-            await sendRoomMessage(selectedRoom.id, user.id, username, newMessage.trim());
+            const newMsg = await sendRoomMessage(selectedRoom.id, user.id, username, newMessage.trim());
             setNewMessage('');
-            // Refresh messages immediately
-            const history = await getRoomMessages(selectedRoom.id);
-            setMessages(history);
+            
+            if (newMsg) {
+                setMessages(prev => {
+                    if (prev.some(m => m.id === newMsg.id)) return prev;
+                    return [...prev, newMsg];
+                });
+            }
         } catch (error) {
             console.error('Failed to send message:', error);
         } finally {
