@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { getQuestions, Question, getRoadmapBySkill, updateRoadmap } from '../../api/db';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,22 @@ import { Progress } from '@/components/ui/progress';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, CheckCircle2, XCircle, Trophy, ArrowRight, Home, Award } from 'lucide-react';
 import Navigation from '@/components/Navigation';
+
+const QuizHeader = () => (
+  <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <div className="container mx-auto px-4">
+      <div className="flex justify-center items-center h-16">
+        <Link to="/" className="flex items-center">
+          <img
+            src="/assets/logo.png"
+            alt="SkillBridge Logo"
+            className="h-30 w-40 rounded"
+          />
+        </Link>
+      </div>
+    </div>
+  </nav>
+);
 
 const Quiz = () => {
   const { user, isLoading: userLoading } = useUser();
@@ -145,45 +161,47 @@ const Quiz = () => {
 
   if (!isStarted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center py-12 px-4 shadow-inner">
-        <Navigation />
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-xl w-full"
-        >
-          <Card className="border-0 shadow-2xl rounded-3xl overflow-hidden backdrop-blur-sm bg-white/90">
-            <div className="bg-blue-600 p-8 text-center text-white">
-              <Award className="h-16 w-16 mx-auto mb-4 text-blue-100" />
-              <CardTitle className="text-3xl font-bold">
-                {urlTopic ? `Assessment for ${urlTopic}` : "Ready for your assessment?"}
-              </CardTitle>
-            </div>
-            <CardContent className="p-10 space-y-8">
-              <div className="space-y-4 text-gray-600">
-                <p className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
-                  <span>10 Questions based on your chosen skills.</span>
-                </p>
-                <p className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
-                  <span>The test will be in your chosen language.</span>
-                </p>
-                <p className="flex items-center gap-3 font-semibold text-blue-600">
-                  <span className="shrink-0 text-lg">⚠️</span>
-                  <span>Exit full-screen will automatically cancel the test.</span>
-                </p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex flex-col shadow-inner">
+        <QuizHeader />
+        <div className="flex-1 flex items-center justify-center py-12 px-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-xl w-full"
+          >
+            <Card className="border-0 shadow-2xl rounded-3xl overflow-hidden backdrop-blur-sm bg-white/90">
+              <div className="bg-blue-600 p-8 text-center text-white">
+                <Award className="h-16 w-16 mx-auto mb-4 text-blue-100" />
+                <CardTitle className="text-3xl font-bold">
+                  {urlTopic ? `Assessment for ${urlTopic}` : "Ready for your assessment?"}
+                </CardTitle>
               </div>
-              <Button 
-                onClick={handleStart}
-                className="w-full py-8 text-xl font-bold rounded-2xl bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200"
-              >
-                Start Test Now
-              </Button>
-              <p className="text-center text-sm text-gray-400">Clicking start will enter full-screen mode.</p>
-            </CardContent>
-          </Card>
-        </motion.div>
+              <CardContent className="p-10 space-y-8">
+                <div className="space-y-4 text-gray-600">
+                  <p className="flex items-center gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                    <span>10 Questions based on your chosen skills.</span>
+                  </p>
+                  <p className="flex items-center gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                    <span>The test will be in your chosen language.</span>
+                  </p>
+                  <p className="flex items-center gap-3 font-semibold text-blue-600">
+                    <span className="shrink-0 text-lg">⚠️</span>
+                    <span>Exit full-screen will automatically cancel the test.</span>
+                  </p>
+                </div>
+                <Button 
+                  onClick={handleStart}
+                  className="w-full py-8 text-xl font-bold rounded-2xl bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200"
+                >
+                  Start Test Now
+                </Button>
+                <p className="text-center text-sm text-gray-400">Clicking start will enter full-screen mode.</p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
       </div>
     );
   }
@@ -191,7 +209,7 @@ const Quiz = () => {
   if (isComplete) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-12 px-4">
-        <Navigation />
+        <QuizHeader />
         <div className="max-w-2xl mx-auto mt-20">
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
@@ -245,12 +263,12 @@ const Quiz = () => {
   const progress = ((currentIndex + 1) / questions.length) * 100;
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] pb-12">
-      <Navigation />
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col">
+      <QuizHeader />
       
-      <div className="max-w-3xl mx-auto px-4 pt-28">
+      <div className="flex-1 max-w-3xl w-full mx-auto px-4 flex flex-col justify-center py-6">
         {/* Progress header */}
-        <div className="mb-0 space-y-4">
+        <div className="mb-0 space-y-3">
           <div className="flex justify-between items-end">
             <div>
               <p className="text-sm font-semibold text-blue-600 uppercase tracking-wide">Question {currentIndex + 1} of {questions.length}</p>
@@ -263,7 +281,7 @@ const Quiz = () => {
           <Progress value={progress} className="h-3 bg-blue-100" />
         </div>
 
-        <div className="mt-8">
+        <div className="mt-6 flex-1 flex flex-col justify-center">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentIndex}
@@ -273,18 +291,18 @@ const Quiz = () => {
               transition={{ duration: 0.3 }}
             >
               <Card className="border-0 shadow-lg shadow-gray-200/50 rounded-2xl overflow-hidden">
-                <div className="p-8 sm:p-10">
-                  <h3 className="text-2xl font-semibold text-gray-800 leading-tight mb-8">
+                <div className="p-6 sm:p-8">
+                  <h3 className="text-xl sm:text-2xl font-semibold text-gray-800 leading-tight mb-6">
                     {currentQuestion.question}
                   </h3>
 
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {currentQuestion.options.map((option, idx) => (
                       <div
                         key={idx}
                         onClick={() => handleOptionSelect(option)}
                         className={`
-                          group relative p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-center
+                          group relative p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center
                           ${selectedOption === option 
                              ? (isAnswered 
                                 ? (option === currentQuestion.answer ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50')
@@ -295,7 +313,7 @@ const Quiz = () => {
                         `}
                       >
                         <div className={`
-                          w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold mr-4 transition-colors
+                          w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-base sm:text-lg font-bold mr-4 transition-colors
                           ${selectedOption === option 
                              ? (isAnswered 
                                 ? (option === currentQuestion.answer ? 'bg-green-500 text-white' : 'bg-red-500 text-white')
@@ -321,19 +339,19 @@ const Quiz = () => {
                   </div>
                 </div>
 
-                <div className="bg-gray-50 p-6 border-t border-gray-100 flex justify-end items-center">
+                <div className="bg-gray-50 p-4 sm:p-6 border-t border-gray-100 flex justify-end items-center">
                   {!isAnswered ? (
                     <Button 
                       disabled={!selectedOption}
                       onClick={handleCheckAnswer}
-                      className="px-8 py-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-lg font-semibold shadow-md shadow-blue-200"
+                      className="px-6 py-4 sm:px-8 sm:py-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-base sm:text-lg font-semibold shadow-md shadow-blue-200 w-full sm:w-auto"
                     >
                       Check Answer
                     </Button>
                   ) : (
                     <Button 
                       onClick={handleNext}
-                      className="px-8 py-6 rounded-xl bg-gray-900 hover:bg-black text-lg font-semibold flex items-center"
+                      className="px-6 py-4 sm:px-8 sm:py-6 rounded-xl bg-gray-900 hover:bg-black text-base sm:text-lg font-semibold flex items-center justify-center w-full sm:w-auto"
                     >
                       {currentIndex === questions.length - 1 ? "Finish Test" : "Next Question"}
                       <ArrowRight className="ml-2 h-5 w-5" />
