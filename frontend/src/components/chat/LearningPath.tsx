@@ -101,18 +101,45 @@ export const LearningPath: React.FC<LearningPathProps> = ({ prompt, userId }) =>
   const handleToggleCompletion = (nodeId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setNodes(prevNodes => {
-      const updateNodes = (list: LearningNode[]): LearningNode[] => {
+      const updateNodesRecursive = (list: LearningNode[]): LearningNode[] => {
         return list.map(node => {
+          let updatedNode = { ...node };
+
+          // 1. If this is the target node, toggle it
           if (node.id === nodeId) {
-            return { ...node, completed: !node.completed };
+            updatedNode.completed = !node.completed;
+            // If parent is toggled, toggle all children (optional but good UX)
+            if (updatedNode.children) {
+              updatedNode.children = updatedNode.children.map(child => ({
+                ...child, completed: updatedNode.completed
+              }));
+            }
           }
+
+          // 2. Recursively update children and check parent status
           if (node.children) {
-            return { ...node, children: updateNodes(node.children) };
+            // First update children (in case the target was a descendant)
+            const updatedChildren = updateNodesRecursive(node.children);
+            updatedNode.children = updatedChildren;
+
+            // If the target was one of the children (or descendant), 
+            // recalculate this node's completion status
+            const isDescendantTarget = nodeId.startsWith(node.id + ".");
+            if (isDescendantTarget || node.id === nodeId) {
+              const allChildrenDone = updatedChildren.every(c => c.completed);
+              if (allChildrenDone && updatedChildren.length > 0) {
+                updatedNode.completed = true;
+              } else if (!allChildrenDone) {
+                updatedNode.completed = false;
+              }
+            }
           }
-          return node;
+
+          return updatedNode;
         });
       };
-      const result = updateNodes(prevNodes);
+
+      const result = updateNodesRecursive(prevNodes);
       persistRoadmap(result);
       return result;
     });

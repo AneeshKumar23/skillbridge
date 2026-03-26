@@ -33,11 +33,30 @@ app.add_middleware(
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
 def _parse_gemini_json(text: str):
-    """Strip ```json … ``` fences (if present) then JSON-parse."""
+    """Robustly extract and parse JSON from Gemini output."""
     text = text.strip()
+    
+    # Strip Markdown fences if present
     text = re.sub(r'^```[a-zA-Z]*\n?', '', text)
     text = re.sub(r'\n?```$', '', text)
-    return json.loads(text.strip())
+    text = text.strip()
+
+    try:
+        # Try direct parse first
+        return json.loads(text)
+    except json.JSONDecodeError:
+        # If that fails, try to find the first '{' and last '}'
+        try:
+            start = text.index('{')
+            end = text.rindex('}') + 1
+            json_str = text[start:end]
+            return json.loads(json_str)
+        except (ValueError, json.JSONDecodeError) as e:
+            print(f"Failed to parse Gemini JSON. Raw text: {text}")
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Gemini returned invalid JSON: {str(e)}"
+            )
 
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
