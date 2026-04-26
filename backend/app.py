@@ -765,6 +765,22 @@ def get_room_messages(room_id: int, limit: int = 50):
 def post_room_message(room_id: int, user_id: str, req: RoomMessageRequest):
     return RoomService.post_message(room_id, user_id, req.username, req.content)
 
+@app.put("/rooms/messages/{message_id}", summary="Edit a room message")
+def update_room_message(message_id: int, user_id: str, req: RoomMessageRequest):
+    result = supabase.table("room_messages").update({
+        "content": req.content
+    }).eq("id", message_id).eq("user_id", user_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Message not found or unauthorized")
+    return result.data[0]
+
+@app.delete("/rooms/messages/{message_id}", summary="Delete a room message")
+def delete_room_message(message_id: int, user_id: str):
+    result = supabase.table("room_messages").delete().eq("id", message_id).eq("user_id", user_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Message not found or unauthorized")
+    return {"msg": "Message deleted"}
+
 
 # ── Questions ─────────────────────────────────────────────────────────────────
 

@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     ArrowLeft, Users, Search, MessageCircle, Send,
-    Hash, ChevronDown, ChevronRight, BookOpen
+    Hash, ChevronDown, ChevronRight, BookOpen,
+    Pencil, Trash2, X, Check
 } from 'lucide-react';
 import {
     getRooms, getRoomMessages, sendRoomMessage,
-    getSkillHistory, Room, RoomMessage, ProfileItem
+    getSkillHistory, Room, RoomMessage, ProfileItem,
+    editRoomMessage, deleteRoomMessage
 } from '../../api/db';
 import { useUser } from '../context/UserContext';
 import { format } from 'date-fns';
@@ -22,6 +24,8 @@ export const Communities: React.FC<CommunitiesProps> = ({ onBack }) => {
     const [messages, setMessages] = useState<RoomMessage[]>([]);
     const [userSkills, setUserSkills] = useState<string[]>([]);
     const [newMessage, setNewMessage] = useState('');
+    const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
+    const [editingContent, setEditingContent] = useState('');
     const [loadingRooms, setLoadingRooms] = useState(true);
     const [sending, setSending] = useState(false);
     const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
@@ -79,18 +83,25 @@ export const Communities: React.FC<CommunitiesProps> = ({ onBack }) => {
             .on(
                 'postgres_changes',
                 {
-                    event: 'INSERT',
+                    event: '*',
                     schema: 'public',
                     table: 'room_messages',
                     filter: `room_id=eq.${selectedRoom.id}`
                 },
                 (payload) => {
-                    const newMsg = payload.new as RoomMessage;
-                    setMessages(prev => {
-                        // Prevent duplicates if already added via sendRoomMessage
-                        if (prev.some(m => m.id === newMsg.id)) return prev;
-                        return [...prev, newMsg];
-                    });
+                    if (payload.eventType === 'INSERT') {
+                        const newMsg = payload.new as RoomMessage;
+                        setMessages(prev => {
+                            if (prev.some(m => m.id === newMsg.id)) return prev;
+                            return [...prev, newMsg];
+                        });
+                    } else if (payload.eventType === 'UPDATE') {
+                        const updatedMsg = payload.new as RoomMessage;
+                        setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
+                    } else if (payload.eventType === 'DELETE') {
+                        const deletedMsg = payload.old as { id: number };
+                        setMessages(prev => prev.filter(m => m.id !== deletedMsg.id));
+                    }
                 }
             )
             .subscribe();
@@ -125,6 +136,38 @@ export const Communities: React.FC<CommunitiesProps> = ({ onBack }) => {
             console.error('Failed to send message:', error);
         } finally {
             setSending(false);
+        }
+    };
+
+    const handleStartEdit = (msg: RoomMessage) => {
+        setEditingMessageId(msg.id);
+        setEditingContent(msg.content);
+    };
+
+    const handleSaveEdit = async (messageId: number) => {
+        if (!user || !editingContent.trim() || sending) return;
+        setSending(true);
+        try {
+            const username = `${user.first_name} ${user.last_name}`;
+            const updated = await editRoomMessage(messageId, user.id, username, editingContent.trim());
+            setMessages(prev => prev.map(m => m.id === messageId ? updated : m));
+            setEditingMessageId(null);
+        } catch (error) {
+            console.error('Failed to edit message:', error);
+            alert("Failed to edit message");
+        } finally {
+            setSending(false);
+        }
+    };
+
+    const handleDeleteMessage = async (messageId: number) => {
+        if (!user || !window.confirm("Are you sure you want to delete this message?")) return;
+        try {
+            await deleteRoomMessage(messageId, user.id);
+            setMessages(prev => prev.filter(m => m.id !== messageId));
+        } catch (error) {
+            console.error('Failed to delete message:', error);
+            alert("Failed to delete message");
         }
     };
 
@@ -251,22 +294,62 @@ export const Communities: React.FC<CommunitiesProps> = ({ onBack }) => {
                                 }
 
                                 return (
-                                    <div key={msg.id} className="flex gap-4 group hover:bg-gray-50 dark:hover:bg-gray-900/30 -mx-4 px-4 py-1">
+                                    <div key={msg.id} className="flex gap-4 group hover:bg-gray-50 dark:hover:bg-gray-900/30 -mx-4 px-4 py-1 relative">
                                         <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-bold shrink-0 mt-1">
                                             {msg.username?.[0]}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className="font-bold text-gray-900 dark:text-gray-100 text-sm hover:underline cursor-pointer">
-                                                    {msg.username}
-                                                </span>
-                                                <span className="text-[10px] text-gray-500">
-                                                    {format(new Date(msg.created_at), 'MM/dd/yyyy h:mm a')}
-                                                </span>
+                                            <div className="flex items-center justify-between mb-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-gray-900 dark:text-gray-100 text-sm hover:underline cursor-pointer">
+                                                        {msg.username}
+                                                    </span>
+                                                    <span className="text-[10px] text-gray-500">
+                                                        {format(new Date(msg.created_at), 'MM/dd/yyyy h:mm a')}
+                                                    </span>
+                                                </div>
+                                                {user?.id === msg.user_id && !editingMessageId && (
+                                                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm px-1 py-0.5 absolute -top-4 right-4 z-10 transition-opacity">
+                                                        <button 
+                                                            onClick={() => handleStartEdit(msg)}
+                                                            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-500 hover:text-blue-500"
+                                                            title="Edit"
+                                                        >
+                                                            <Pencil className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleDeleteMessage(msg.id)}
+                                                            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-500 hover:text-red-500"
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                                                {msg.content}
-                                            </p>
+                                            {editingMessageId === msg.id ? (
+                                                <div className="space-y-2 mt-1">
+                                                    <input 
+                                                        autoFocus
+                                                        value={editingContent}
+                                                        onChange={e => setEditingContent(e.target.value)}
+                                                        className="w-full bg-gray-100 dark:bg-gray-800 border border-blue-500 rounded px-2 py-1.5 text-sm focus:outline-none"
+                                                        onKeyDown={e => {
+                                                            if (e.key === 'Enter') handleSaveEdit(msg.id);
+                                                            if (e.key === 'Escape') setEditingMessageId(null);
+                                                        }}
+                                                    />
+                                                    <div className="flex items-center gap-2 text-xs">
+                                                        <span className="text-gray-500">Escape to <button onClick={() => setEditingMessageId(null)} className="text-blue-500 hover:underline">cancel</button></span>
+                                                        <span className="text-gray-500">•</span>
+                                                        <span className="text-gray-500">Enter to <button onClick={() => handleSaveEdit(msg.id)} className="text-blue-500 hover:underline">save</button></span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                                                    {msg.content}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 );

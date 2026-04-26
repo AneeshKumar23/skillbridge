@@ -362,6 +362,25 @@ export const sendRoomMessage = async (roomId: number, userId: string, username: 
   return handleResponse<RoomMessage>(res);
 };
 
+/** Edit a room message */
+export const editRoomMessage = async (messageId: number, userId: string, username: string, content: string) => {
+  const res = await fetch(`${API_BASE_URL}/rooms/messages/${messageId}?user_id=${userId}`, {
+    method: 'PUT',
+    headers: jsonHeaders(),
+    body: JSON.stringify({ username, content }),
+  });
+  return handleResponse<RoomMessage>(res);
+};
+
+/** Delete a room message */
+export const deleteRoomMessage = async (messageId: number, userId: string) => {
+  const res = await fetch(`${API_BASE_URL}/rooms/messages/${messageId}?user_id=${userId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  return handleResponse<{ msg: string }>(res);
+};
+
 export const getQuestions = async (userId: string, topic: string, numQuestions: number, language: string) => {
   const res = await fetch(`${API_BASE_URL}/users/${userId}/questions`, {
     method: 'POST',
