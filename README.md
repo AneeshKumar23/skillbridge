@@ -55,7 +55,7 @@ npm run dev
 | Database | Supabase PostgreSQL |
 | Auth | Supabase Auth (JWT) |
 | Storage | Supabase Storage |
-| AI | Google Gemini (`gemma-3-27b-it`) |
+| AI | Google Gemini (`gemini-3-flash-preview `) |
 | Migrations | Alembic + SQLAlchemy |
 
 ---
