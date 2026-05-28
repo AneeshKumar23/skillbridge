@@ -33,21 +33,51 @@ def search_youtube(query, max_results=5):
         })
     return videos
 
-def generate_certificate(name: str) -> tuple:
-    """Generate a certificate PNG and return (filename, raw_bytes) for upload."""
+def generate_certificate(name: str, skill: str, certificate_id: str, date_str: str) -> tuple:
+    """Generate a certificate PNG with name, skill, QR code, and return (filename, raw_bytes, sha256_hash) for upload."""
     import io
+    import qrcode
+    import hashlib
+
     img = Image.open("assets/image.png")
     d = ImageDraw.Draw(img)
-    location = (600, 550)
-    text_color = (18, 48, 134)
-    font = ImageFont.truetype("assets/aerial.ttf", 75)
-    d.text(location, name, fill=text_color, font=font)
+    text_color = (18, 48, 134) # elegant dark blue
 
+    # Load fonts
+    font_name = ImageFont.truetype("assets/aerial.ttf", 60)
+    font_skill = ImageFont.truetype("assets/aerial.ttf", 45)
+    font_meta = ImageFont.truetype("assets/aerial.ttf", 22)
+
+    # Draw name and skill (centered horizontally)
+    # Using anchor="mm" to center-align text at coordinate (x, y)
+    d.text((800, 560), name, fill=text_color, font=font_name, anchor="mm")
+    d.text((800, 690), skill, fill=text_color, font=font_skill, anchor="mm")
+
+    # Draw date and certificate ID
+    d.text((250, 920), f"Date: {date_str}", fill=text_color, font=font_meta)
+    d.text((250, 960), f"ID: {certificate_id}", fill=text_color, font=font_meta)
+
+    # Generate QR Code containing the verification URL
+    verify_url = f"http://localhost:5173/verify/{certificate_id}"
+    qr = qrcode.QRCode(version=1, box_size=3, border=2)
+    qr.add_data(verify_url)
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color="black", back_color="white")
+    qr_img = qr_img.resize((160, 160))
+
+    # Paste QR Code on the bottom right
+    img.paste(qr_img, (1200, 860))
+
+    # Save to buffer
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
     file_bytes = buffer.getvalue()
-    file_name = f"{name}.png"
-    return file_name, file_bytes
+    
+    # Calculate SHA256 of final PNG bytes
+    sha256_hash = hashlib.sha256(file_bytes).hexdigest()
+    file_name = f"{certificate_id}.png"
+    
+    return file_name, file_bytes, sha256_hash
 
 def generate_youtube_content(query):
     # Step 1: Get YouTube videos

@@ -271,14 +271,53 @@ export const getResources = async (userId: string, type?: 'youtube' | 'article' 
   return handleResponse<Resource[]>(res);
 };
 
-// ── Certificate ────────────────────────────────────────────────────────────────
+export interface DBUserCertificate {
+  id: string;
+  user_id: string;
+  skill: string;
+  cert_hash: string;
+  tx_hash: string | null;
+  contract_address: string | null;
+  chain_id: number | null;
+  network: string | null;
+  verification_status: 'pending' | 'verified' | 'revoked' | 'failed';
+  image_url: string;
+  explorer_url: string | null;
+  created_at: string;
+}
 
-export const generateCertificate = async (userId: string) => {
-  const res = await fetch(`${API_BASE_URL}/certificate/${userId}`, {
+export const generateCertificateForSkill = async (userId: string, skill: string) => {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/certificates/generate`, {
     method: 'POST',
+    headers: jsonHeaders(),
+    body: JSON.stringify({ skill }),
+  });
+  return handleResponse<{ msg: string; certificate: DBUserCertificate }>(res);
+};
+
+export const getUserCertificates = async (userId: string) => {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/certificates`, {
     headers: authHeaders(),
   });
-  return handleResponse<{ msg: string; url: string }>(res);
+  return handleResponse<DBUserCertificate[]>(res);
+};
+
+export const verifyCertificate = async (certificateId: string) => {
+  const res = await fetch(`${API_BASE_URL}/certificates/${certificateId}/verify`, {
+    headers: authHeaders(),
+  });
+  return handleResponse<{
+    certificate_id: string;
+    is_verified: boolean;
+    db_record: DBUserCertificate;
+    blockchain_record: {
+      valid: boolean;
+      cert_hash: string;
+      student_name: string;
+      skill: string;
+      issued_at: number;
+    };
+  }>(res);
 };
 
 

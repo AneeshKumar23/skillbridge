@@ -7,7 +7,7 @@ from sqlalchemy import (
     Column, String, Boolean, Text, BigInteger, TIMESTAMP, ARRAY,
     ForeignKey, func
 )
-from pgvector.sqlalchemy import HalfVector
+from pgvector.sqlalchemy import HALFVEC
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import declarative_base
 
@@ -63,7 +63,7 @@ class UserChatMessage(Base):
     user_id    = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     role       = Column(Text, nullable=False)   # 'user' | 'assistant'
     content    = Column(Text, nullable=False)
-    embedding  = Column(HalfVector(3072), nullable=True)  # 3072-D halfvec for pgvector (gemini-embedding-001)
+    embedding  = Column(HALFVEC(3072), nullable=True)  # 3072-D halfvec for pgvector (gemini-embedding-001)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
 
@@ -106,3 +106,20 @@ class UserSkill(Base):
     language   = Column(Text, nullable=True)          # language name (language rows)
     status     = Column(Text, nullable=True)          # 'active'|'completed'|'paused' (skills only)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+
+
+class UserCertificate(Base):
+    __tablename__ = "user_certificates"
+
+    id                  = Column(String, primary_key=True)  # e.g., SB-2026-0001
+    user_id             = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    skill               = Column(String, nullable=False)
+    cert_hash           = Column(String, unique=True, nullable=True)  # SHA-256 of final PNG
+    tx_hash             = Column(String, nullable=True)               # Polygon Tx Hash
+    contract_address    = Column(String, nullable=True)
+    chain_id            = Column(BigInteger, nullable=True)
+    network             = Column(String, nullable=True)
+    verification_status = Column(String, server_default="pending")    # pending | verified | revoked | failed
+    image_url           = Column(String, nullable=True)
+    explorer_url        = Column(String, nullable=True)
+    created_at          = Column(TIMESTAMP(timezone=True), server_default=func.now())

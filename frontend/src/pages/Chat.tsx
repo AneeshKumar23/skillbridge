@@ -63,7 +63,7 @@ export const Chat: React.FC = () => {
   }
 
   if (currentPage === 'certificates') {
-    return <Certificates onBack={handleBackToChat} />;
+    return <Certificates onBack={handleBackToChat} userId={user.id} />;
   }
 
   if (currentPage === 'communities') {

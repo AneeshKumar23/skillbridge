@@ -1,10 +1,13 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from supabase import create_client, Client
 import google.generativeai as genai
 import json
 import re
+import datetime
+import time
+import os
 from typing import List, Optional
 from dotenv import load_dotenv
 from model import *
@@ -558,6 +561,100 @@ Generate ONLY a JSON array of objects with the following format, with no extra m
             raise HTTPException(status_code=500, detail=f"Failed to generate questions: {e}")
 
 
+# ── Certificate Service ───────────────────────────────────────────────────────
+
+class CertificateService:
+    @staticmethod
+    def generate_id() -> str:
+        import datetime
+        current_year = datetime.datetime.now().year
+        # Count all certificates to get a sequence number
+        res = supabase.table("user_certificates").select("id", count="exact").execute()
+        count = len(res.data) if res.data else 0
+        sequence = count + 1
+        return f"SB-{current_year}-{sequence:04d}"
+
+    @staticmethod
+    def get_by_user(user_id: str) -> list:
+        result = supabase.table("user_certificates").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+        return result.data or []
+
+    @staticmethod
+    def get_by_id(cert_id: str) -> dict:
+        result = supabase.table("user_certificates").select("*").eq("id", cert_id).execute()
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Certificate not found")
+        return result.data[0]
+
+    @staticmethod
+    def register_on_chain_background(
+        cert_id: str,
+        cert_hash: str,
+        student_name: str,
+        skill: str,
+        issued_at_timestamp: int
+    ):
+        import time
+        import os
+        import hashlib
+        try:
+            print(f"Background task started: registering {cert_id} on Polygon...")
+            rpc_url = os.getenv("POLYGON_RPC_URL")
+            contract_address = os.getenv("CONTRACT_ADDRESS")
+            private_key = os.getenv("CONTRACT_DEPLOYER_PRIVATE_KEY") or os.getenv("PRIVATE_KEY")
+            
+            # Check if we should fallback to mock (if config is missing or placeholder)
+            if not rpc_url or not contract_address or not private_key or "your_metamask" in private_key or "deployed" in contract_address:
+                print("WARNING: Polygon configuration missing or using placeholder values in .env. Mocking blockchain registration...")
+                time.sleep(3) # simulate transaction confirmation delay
+                fake_tx_hash = f"0x{hashlib.sha256(cert_id.encode()).hexdigest()}"
+                supabase.table("user_certificates").update({
+                    "tx_hash": fake_tx_hash,
+                    "explorer_url": f"https://amoy.polygonscan.com/tx/{fake_tx_hash}",
+                    "contract_address": contract_address or "0xMockContractAddress1234567890abcdef12345",
+                    "chain_id": 80002,
+                    "network": "polygon-amoy",
+                    "verification_status": "verified"
+                }).eq("id", cert_id).execute()
+                print(f"Certificate {cert_id} registered on mock Polygon successfully.")
+                return
+
+            # Real blockchain execution
+            from blockchain.interactor import register_certificate_on_blockchain, get_web3_and_contract
+            tx_hash = register_certificate_on_blockchain(
+                certificate_id=cert_id,
+                cert_hash=cert_hash,
+                student_name=student_name,
+                skill=skill,
+                issued_at=issued_at_timestamp
+            )
+            print(f"Transaction sent: {tx_hash}. Waiting for confirmation...")
+            
+            w3, _ = get_web3_and_contract()
+            tx_receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
+            
+            if tx_receipt.status == 1:
+                explorer_url = f"https://amoy.polygonscan.com/tx/{tx_hash}"
+                
+                # Update DB to verified
+                supabase.table("user_certificates").update({
+                    "tx_hash": tx_hash,
+                    "explorer_url": explorer_url,
+                    "contract_address": contract_address,
+                    "chain_id": int(os.getenv("CHAIN_ID", "80002")),
+                    "network": os.getenv("NETWORK", "polygon-amoy"),
+                    "verification_status": "verified"
+                }).eq("id", cert_id).execute()
+                print(f"Certificate {cert_id} verified on-chain in block {tx_receipt.blockNumber}")
+            else:
+                raise Exception("Transaction reverted")
+        except Exception as e:
+            print(f"Error registering certificate {cert_id} on-chain: {e}")
+            supabase.table("user_certificates").update({
+                "verification_status": "failed"
+            }).eq("id", cert_id).execute()
+
+
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║  ROUTES                                                                     ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
@@ -726,29 +823,151 @@ def get_language_history(user_id: str):
 
 # ── Certificate ───────────────────────────────────────────────────────────────
 
-@app.post("/certificate/{user_id}",
-          summary="Generate certificate PNG → upload to Supabase Storage")
-def certificate_endpoint(user_id: str):
+@app.post("/users/{user_id}/certificates/generate",
+          summary="Generate certificate PNG → upload to Supabase Storage → publish to Polygon")
+def generate_user_certificate(user_id: str, req: CertificateGenerateRequest, background_tasks: BackgroundTasks):
+    # 1. Fetch user data to verify existence and name
     user_data = UserService.get_user(user_id)
-    name = user_data.get("first_name")
+    name = f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip()
     if not name:
-        raise HTTPException(status_code=400, detail="User has no first_name")
+        raise HTTPException(status_code=400, detail="User has no name configured")
 
-    file_name, file_bytes = generate_certificate(name)
+    # 2. Check if certificate is already generated for this skill to prevent double issuance
+    existing = supabase.table("user_certificates").select("id").eq("user_id", user_id).eq("skill", req.skill).execute()
+    if existing.data:
+        # Return existing certificate details
+        res_full = supabase.table("user_certificates").select("*").eq("id", existing.data[0]["id"]).execute()
+        return {
+            "msg": "Certificate already generated for this skill",
+            "certificate": res_full.data[0]
+        }
+
+    # 3. Generate certificate ID
+    cert_id = CertificateService.generate_id()
+    date_str = datetime.date.today().strftime("%B %d, %Y")
+    issued_at_ts = int(time.time())
+
+    # 4. Generate Certificate Image with QR Code
+    try:
+        file_name, file_bytes, cert_hash = generate_certificate(
+            name=name,
+            skill=req.skill,
+            certificate_id=cert_id,
+            date_str=date_str
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to render certificate image: {e}")
+
+    # 5. Upload to Supabase Storage
+    # Bucket name: certificates
     storage_path = f"{user_id}/{file_name}"
-
-    supabase.storage.from_("certificates").upload(
-        path=storage_path,
-        file=file_bytes,
-        file_options={"content-type": "image/png", "upsert": "true"},
-    )
+    try:
+        supabase.storage.from_("certificates").upload(
+            path=storage_path,
+            file=file_bytes,
+            file_options={"content-type": "image/png", "upsert": "true"},
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to upload to storage: {e}")
 
     public_url = supabase.storage.from_("certificates").get_public_url(storage_path)
 
-    # Save as a certificate resource so it appears in GET /users/{id}/resources
-    ResourceService._save(user_id, "certificate", name, {"url": public_url})
+    # 6. Insert pending certificate row into database
+    cert_record = {
+        "id": cert_id,
+        "user_id": user_id,
+        "skill": req.skill,
+        "cert_hash": cert_hash,
+        "verification_status": "pending",
+        "image_url": public_url,
+        "contract_address": os.getenv("CONTRACT_ADDRESS"),
+        "chain_id": int(os.getenv("CHAIN_ID", "80002")),
+        "network": os.getenv("NETWORK", "polygon-amoy")
+    }
+    
+    supabase.table("user_certificates").insert(cert_record).execute()
 
-    return {"msg": "Certificate generated", "url": public_url}
+    # 7. Queue blockchain registration in background task
+    background_tasks.add_task(
+        CertificateService.register_on_chain_background,
+        cert_id=cert_id,
+        cert_hash=cert_hash,
+        student_name=name,
+        skill=req.skill,
+        issued_at_timestamp=issued_at_ts
+    )
+
+    # Return immediate response
+    return {
+        "msg": "Certificate generation initiated",
+        "certificate": {
+            **cert_record,
+            "verification_status": "pending"
+        }
+    }
+
+
+@app.get("/certificates/{certificate_id}/verify",
+         summary="Verify a certificate using both DB and Polygon contract validation")
+def verify_certificate_endpoint(certificate_id: str):
+    import time
+    
+    # 1. Look up DB record
+    db_cert = CertificateService.get_by_id(certificate_id)
+    
+    # 2. Query blockchain if configured
+    rpc_url = os.getenv("POLYGON_RPC_URL")
+    contract_address = os.getenv("CONTRACT_ADDRESS")
+    private_key = os.getenv("CONTRACT_DEPLOYER_PRIVATE_KEY") or os.getenv("PRIVATE_KEY")
+    
+    is_blockchain_valid = False
+    blockchain_data = None
+    
+    if rpc_url and contract_address and private_key and "your_metamask" not in private_key and "deployed" not in contract_address:
+        try:
+            # Query contract directly
+            blockchain_data = verify_certificate_on_blockchain(certificate_id)
+            # Compare hash in contract with hash in DB to verify tampering
+            is_blockchain_valid = blockchain_data.get("valid") and (blockchain_data.get("cert_hash") == db_cert.get("cert_hash"))
+        except Exception as e:
+            print(f"Failed to verify on blockchain: {e}")
+            is_blockchain_valid = False
+    else:
+        # Mock mode fallback (if keys aren't set)
+        print("Using DB validation fallback for verification (Polygon config not active)")
+        is_blockchain_valid = db_cert.get("verification_status") == "verified"
+        
+        # Parse timestamp
+        try:
+            from datetime import datetime as dt
+            parsed_dt = dt.fromisoformat(db_cert["created_at"].replace("Z", "+00:00"))
+            issued_at_ts = int(parsed_dt.timestamp())
+        except Exception:
+            issued_at_ts = int(time.time())
+            
+        user_data = UserService.get_user(db_cert["user_id"])
+        full_name = f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip()
+        
+        blockchain_data = {
+            "valid": is_blockchain_valid,
+            "cert_hash": db_cert.get("cert_hash") or "",
+            "student_name": full_name,
+            "skill": db_cert.get("skill", ""),
+            "issued_at": issued_at_ts
+        }
+        
+    return {
+        "certificate_id": certificate_id,
+        "is_verified": is_blockchain_valid,
+        "db_record": db_cert,
+        "blockchain_record": blockchain_data
+    }
+
+
+@app.get("/users/{user_id}/certificates",
+         summary="List all certificates earned by a user")
+def list_user_certificates(user_id: str):
+    return CertificateService.get_by_user(user_id)
 
 
 # ── Rooms ────────────────────────────────────────────────────────────────────

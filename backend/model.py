@@ -88,3 +88,11 @@ class QuestionRequest(BaseModel):
     topic: str
     num_questions: Optional[int] = 10
     language: Optional[str] = "English"
+
+
+# ── Certificate ───────────────────────────────────────────────────────────────
+
+class CertificateGenerateRequest(BaseModel):
+    """Body for POST /users/{id}/certificates/generate."""
+    skill: str
+
