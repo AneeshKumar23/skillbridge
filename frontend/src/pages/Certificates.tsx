@@ -404,15 +404,15 @@ export const Certificates: React.FC<CertificatesProps> = ({ onBack, userId }) =>
       {/* Certificate Modal */}
       {selectedCertificate && selectedCertificate.dbCert && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 max-w-md w-full max-h-[95vh] overflow-hidden shadow-2xl flex flex-col">
             
             {/* Modal Header */}
-            <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-start">
+            <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
               <div>
                 <span className="text-[10px] font-bold bg-blue-500/10 text-blue-500 border border-blue-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  Polygon Secure Verification
+                  Polygon Verification
                 </span>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-1">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-0.5">
                   {selectedCertificate.skill} Certificate
                 </h3>
               </div>
@@ -425,10 +425,10 @@ export const Certificates: React.FC<CertificatesProps> = ({ onBack, userId }) =>
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 space-y-6">
+            <div className="p-4 space-y-4 overflow-y-auto">
               
               {/* Image Preview */}
-              <div className="border border-gray-100 dark:border-gray-800 rounded-2xl overflow-hidden shadow-md max-w-md mx-auto relative bg-gray-50 dark:bg-gray-950">
+              <div className="border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm max-w-[320px] mx-auto relative bg-gray-50 dark:bg-gray-950">
                 <img 
                   src={selectedCertificate.dbCert.image_url} 
                   alt="Certificate Preview" 
@@ -437,17 +437,17 @@ export const Certificates: React.FC<CertificatesProps> = ({ onBack, userId }) =>
               </div>
 
               {/* Status and Details */}
-              <div className="bg-gray-50 dark:bg-gray-950 rounded-2xl p-4 space-y-3 text-sm">
-                <div className="flex justify-between items-center border-b border-gray-200/40 dark:border-gray-800 pb-2">
+              <div className="bg-gray-50 dark:bg-gray-950 rounded-xl p-3 space-y-2 text-xs">
+                <div className="flex justify-between items-center border-b border-gray-200/40 dark:border-gray-800 pb-1.5">
                   <span className="text-gray-400">Certificate ID:</span>
-                  <span className="font-semibold text-gray-900 dark:text-white font-mono text-xs">
+                  <span className="font-semibold text-gray-900 dark:text-white font-mono">
                     {selectedCertificate.dbCert.id}
                   </span>
                 </div>
 
-                <div className="flex justify-between items-center border-b border-gray-200/40 dark:border-gray-800 pb-2">
+                <div className="flex justify-between items-center border-b border-gray-200/40 dark:border-gray-800 pb-1.5">
                   <span className="text-gray-400">On-Chain Status:</span>
-                  <span className={`inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
                     selectedCertificate.dbCert.verification_status === 'verified'
                       ? 'bg-emerald-500/15 text-emerald-500'
                       : selectedCertificate.dbCert.verification_status === 'pending'
@@ -459,32 +459,25 @@ export const Certificates: React.FC<CertificatesProps> = ({ onBack, userId }) =>
                 </div>
 
                 {selectedCertificate.dbCert.tx_hash && (
-                  <div className="flex justify-between items-center border-b border-gray-200/40 dark:border-gray-800 pb-2">
-                    <span className="text-gray-400">Transaction Hash:</span>
-                    <span className="font-mono text-xs text-gray-500 truncate max-w-[200px]" title={selectedCertificate.dbCert.tx_hash}>
+                  <div className="flex justify-between items-center pb-0.5">
+                    <span className="text-gray-400">Transaction:</span>
+                    <span className="font-mono text-gray-500 truncate max-w-[180px]" title={selectedCertificate.dbCert.tx_hash}>
                       {selectedCertificate.dbCert.tx_hash}
                     </span>
                   </div>
                 )}
-
-                <div className="flex justify-between items-center pb-1">
-                  <span className="text-gray-400">Registered Hash:</span>
-                  <span className="font-mono text-[10px] text-gray-500 truncate max-w-[200px]" title={selectedCertificate.dbCert.cert_hash}>
-                    {selectedCertificate.dbCert.cert_hash}
-                  </span>
-                </div>
               </div>
 
               {/* Actions */}
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col sm:flex-row gap-2 pt-1">
                 <a
                   href={selectedCertificate.dbCert.image_url}
                   download={`${selectedCertificate.dbCert.id}.png`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-white py-2.5 rounded-xl text-center text-sm font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center space-x-1.5"
+                  className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-white py-2 rounded-lg text-center text-xs font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center space-x-1"
                 >
-                  <Download className="w-4 h-4" />
+                  <Download className="w-3.5 h-3.5" />
                   <span>Download file</span>
                 </a>
                 
@@ -492,9 +485,9 @@ export const Certificates: React.FC<CertificatesProps> = ({ onBack, userId }) =>
                   href={`/verify/${selectedCertificate.dbCert.id}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-center text-sm font-semibold transition-colors flex items-center justify-center space-x-1.5"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-center text-xs font-semibold transition-colors flex items-center justify-center space-x-1"
                 >
-                  <ShieldCheck className="w-4 h-4" />
+                  <ShieldCheck className="w-3.5 h-3.5" />
                   <span>Verify Blockchain Proof</span>
                 </a>
               </div>

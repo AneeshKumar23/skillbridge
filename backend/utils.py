@@ -51,6 +51,11 @@ def generate_certificate(name: str, skill: str, certificate_id: str, date_str: s
     # Draw name and skill (centered horizontally)
     # Using anchor="mm" to center-align text at coordinate (x, y)
     d.text((800, 560), name, fill=text_color, font=font_name, anchor="mm")
+
+    # Cover the template's dummy text with a clean white rectangle
+    # Dummy text is centered and spans roughly from y=620 to y=760
+    d.rectangle([(300, 620), (1300, 760)], fill=(255, 255, 255))
+
     d.text((800, 690), skill, fill=text_color, font=font_skill, anchor="mm")
 
     # Draw date and certificate ID
