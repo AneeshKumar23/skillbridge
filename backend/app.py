@@ -862,6 +862,12 @@ def generate_user_certificate(user_id: str, req: CertificateGenerateRequest, bac
     # Bucket name: certificates
     storage_path = f"{user_id}/{file_name}"
     try:
+        # Auto-create the bucket if it doesn't exist (public: True so images are accessible)
+        try:
+            supabase.storage.create_bucket("certificates", options={"public": True})
+        except Exception:
+            pass # ignore if it already exists
+
         supabase.storage.from_("certificates").upload(
             path=storage_path,
             file=file_bytes,
