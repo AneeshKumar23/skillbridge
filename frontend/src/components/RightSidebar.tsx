@@ -35,12 +35,14 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ currentPrompt, userI
       <div className={`fixed right-0 top-12 sm:top-16 h-[calc(100vh-3rem)] sm:h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-lg transition-transform duration-300 ease-in-out z-30 w-80 sm:w-96 ${isExpanded ? 'translate-x-0' : 'translate-x-full'
         }`}>
         {/* Toggle Button (when expanded) */}
-        <button
-          onClick={toggleExpanded}
-          className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-full bg-white dark:bg-gray-900 border border-r-0 border-gray-200 dark:border-gray-700 rounded-l-lg p-1.5 sm:p-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-md"
-        >
-          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-        </button>
+        {isExpanded && (
+          <button
+            onClick={toggleExpanded}
+            className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-full bg-white dark:bg-gray-900 border border-r-0 border-gray-200 dark:border-gray-700 rounded-l-lg p-1.5 sm:p-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-md"
+          >
+            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+          </button>
+        )}
 
         <div className="flex flex-col h-full">
           {/* Tab Navigation */}
