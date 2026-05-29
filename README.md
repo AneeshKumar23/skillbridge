@@ -65,7 +65,7 @@ npm run dev
 Copy and fill in values:
 
 ```
-backend/.env   ← SUPABASE_URL, SUPABASE_SERVICE_KEY, DATABASE_URL, MODEL_API_KEY, YOUTUBE_API_KEY
+backend/.env   ← SUPABASE_URL, SUPABASE_SERVICE_KEY, DATABASE_URL, MODEL_API_KEY, YOUTUBE_API_KEY, BLOCK
 ```
 
 See [backend/README.md](backend/README.md#2--environment-variables) for all required keys.
