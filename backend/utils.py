@@ -44,34 +44,32 @@ def generate_certificate(name: str, skill: str, certificate_id: str, date_str: s
     text_color = (18, 48, 134) # elegant dark blue
 
     # Load fonts
-    font_name = ImageFont.truetype("assets/aerial.ttf", 60)
-    font_skill = ImageFont.truetype("assets/aerial.ttf", 45)
-    font_meta = ImageFont.truetype("assets/aerial.ttf", 22)
+    font_name = ImageFont.truetype("assets/aerial.ttf", 75)
+    font_skill = ImageFont.truetype("assets/aerial.ttf", 55)
+    font_meta = ImageFont.truetype("assets/aerial.ttf", 26)
 
-    # Draw name and skill (centered horizontally)
+    # Draw name (centered horizontally at X=1000, in the upper space)
     # Using anchor="mm" to center-align text at coordinate (x, y)
-    d.text((800, 560), name, fill=text_color, font=font_name, anchor="mm")
+    d.text((1000, 640), name, fill=text_color, font=font_name, anchor="mm")
 
-    # Cover the template's dummy text with a clean white rectangle
-    # Dummy text is centered and spans roughly from y=620 to y=760
-    d.rectangle([(300, 620), (1300, 760)], fill=(255, 255, 255))
+    # Draw skill (centered horizontally at X=1000, in the lower space below 'for successfully completing the course')
+    d.text((1000, 960), skill, fill=text_color, font=font_skill, anchor="mm")
 
-    d.text((800, 690), skill, fill=text_color, font=font_skill, anchor="mm")
-
-    # Draw date and certificate ID
-    d.text((250, 920), f"Date: {date_str}", fill=text_color, font=font_meta)
-    d.text((250, 960), f"ID: {certificate_id}", fill=text_color, font=font_meta)
+    # Draw date and certificate ID in the bottom-left area, to the right of the ornament
+    d.text((350, 1150), f"Date: {date_str}", fill=text_color, font=font_meta)
+    d.text((350, 1210), f"ID: {certificate_id}", fill=text_color, font=font_meta)
 
     # Generate QR Code containing the verification URL
-    verify_url = f"http://localhost:5173/verify/{certificate_id}"
+    frontend_base = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    verify_url = f"{frontend_base.rstrip('/')}/verify/{certificate_id}"
     qr = qrcode.QRCode(version=1, box_size=3, border=2)
     qr.add_data(verify_url)
     qr.make(fit=True)
     qr_img = qr.make_image(fill_color="black", back_color="white")
-    qr_img = qr_img.resize((160, 160))
+    qr_img = qr_img.resize((200, 200))
 
-    # Paste QR Code on the bottom right
-    img.paste(qr_img, (1200, 860))
+    # Paste QR Code in the bottom-right area, to the left of the ornament (symmetric with Date/ID)
+    img.paste(qr_img, (1450, 1110))
 
     # Save to buffer
     buffer = io.BytesIO()
