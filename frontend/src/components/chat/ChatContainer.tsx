@@ -150,7 +150,8 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ userId, currentSki
     } else {
       try {
         audioRecorderRef.current = new AudioRecorder(async (audioBlob) => {
-          const result = await transcribeAudio(audioBlob, 'sk_f4eb4f9b5bd11d11f96e09cb006772873690e5ef88c767c0', currentLanguage);
+          const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY || '';
+          const result = await transcribeAudio(audioBlob, apiKey, currentLanguage);
           if (result?.text) setInputMessage(result.text.trim());
           setIsTranscribing(false);
         });
